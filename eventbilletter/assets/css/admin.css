@@ -1,0 +1,54 @@
+/* Eventbilletter — admin */
+
+.eb-ticket-table th,
+.eb-ticket-table td {
+	vertical-align: middle;
+}
+
+.eb-ticket-table .small-text {
+	width: 5.5rem;
+}
+
+.eb-remove-ticket {
+	font-size: 1.35rem;
+	line-height: 1;
+	color: #b32d2e;
+	text-decoration: none;
+	border: 0;
+	background: transparent;
+	cursor: pointer;
+}
+
+.eb-status {
+	display: inline-block;
+	padding: 0.15rem 0.5rem;
+	border-radius: 3px;
+	font-size: 12px;
+	font-weight: 600;
+	background: #f0f0f1;
+}
+
+.eb-status--paid {
+	background: #d1e7dd;
+	color: #0f5132;
+}
+
+.eb-status--pending {
+	background: #fff3cd;
+	color: #664d03;
+}
+
+.eb-status--cancelled,
+.eb-status--failed {
+	background: #f8d7da;
+	color: #842029;
+}
+
+.eb-status--refunded {
+	background: #e2e3e5;
+	color: #41464b;
+}
+
+.eb-settings code {
+	user-select: all;
+}
