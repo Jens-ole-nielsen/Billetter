@@ -134,15 +134,18 @@
 		if (!scale) {
 			scale = 1000;
 		}
-		var cover = Math.max(bounds.width / photo.naturalWidth, bounds.height / photo.naturalHeight);
-		var w = photo.naturalWidth * cover * (scale / 1000);
-		var h = photo.naturalHeight * cover * (scale / 1000);
-		var cx = bounds.width / 2 + (bounds.width * ox) / 1000;
-		var cy = bounds.height / 2 + (bounds.height * oy) / 1000;
-		photo.style.width = w + "px";
-		photo.style.height = h + "px";
-		photo.style.left = cx - w / 2 + "px";
-		photo.style.top = cy - h / 2 + "px";
+		// Same fit as TicketFrame::photo_frame: 1000 shows the whole photo.
+		var fit = Math.min(bounds.width / photo.naturalWidth, bounds.height / photo.naturalHeight);
+		var w = photo.naturalWidth * fit * (scale / 1000);
+		var h = photo.naturalHeight * fit * (scale / 1000);
+		var x = (bounds.width - w) / 2 + (bounds.width * ox) / 1000;
+		var y = (bounds.height * oy) / 1000;
+		photo.style.setProperty("width", w + "px", "important");
+		photo.style.setProperty("height", h + "px", "important");
+		photo.style.setProperty("max-width", "none", "important");
+		photo.style.setProperty("max-height", "none", "important");
+		photo.style.setProperty("left", x + "px", "important");
+		photo.style.setProperty("top", y + "px", "important");
 	}
 
 	var photoNode = document.getElementById("fhb-ticket-photo");

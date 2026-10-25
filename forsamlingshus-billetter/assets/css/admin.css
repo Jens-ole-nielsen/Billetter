@@ -29,7 +29,8 @@
 .fhb-ticket-photo {
 	position: absolute;
 	z-index: 0;
-	max-width: none;
+	max-width: none !important;
+	max-height: none !important;
 	pointer-events: none;
 }
 
@@ -49,13 +50,13 @@
 .fhb-block {
 	position: absolute;
 	z-index: 1;
+	box-sizing: border-box;
 	margin: 0;
 	padding: 3px 6px;
 	background: transparent;
 	border-radius: 4px;
 	cursor: grab;
-	width: max-content;
-	max-width: calc(100% - 8px);
+	max-width: none;
 	font-size: 12px;
 	line-height: 1.2;
 	box-shadow: none;
@@ -77,10 +78,6 @@
 
 .fhb-ticket-logo {
 	z-index: 2;
-	max-width: 28%;
-	max-height: 16%;
-	width: auto;
-	height: auto;
 	padding: 0;
 	background: transparent;
 	object-fit: contain;
@@ -112,7 +109,7 @@
 }
 
 .fhb-ticket-qr svg {
-	width: 96px;
+	width: 70%;
 	height: auto;
 	display: block;
 	margin: 0 auto 6px;
@@ -144,7 +141,7 @@
 
 .fhb-ticket-code code {
 	display: block;
-	white-space: nowrap;
+	white-space: normal;
 	background: transparent;
 	padding: 0;
 	color: inherit;

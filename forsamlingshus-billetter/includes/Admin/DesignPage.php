@@ -273,8 +273,10 @@ final class DesignPage {
 		$pos = TicketFrame::default_blocks()[ $name ];
 		$x = (int) ( $design[ 'block_' . $name . '_x' ] ?? $pos['x'] );
 		$y = (int) ( $design[ 'block_' . $name . '_y' ] ?? $pos['y'] );
+		$span = TicketFrame::block_span( $name );
 
-		return 'left:' . $this->css_num( $x / 10 ) . '%;top:' . $this->css_num( $y / 10 ) . '%;';
+		return 'left:' . $this->css_num( $x / 10 ) . '%;top:' . $this->css_num( $y / 10 )
+			. '%;width:' . $this->css_num( $span['w'] / 10 ) . '%;height:' . $this->css_num( $span['h'] / 10 ) . '%;';
 	}
 
 	private function css_num( float $number ): string {

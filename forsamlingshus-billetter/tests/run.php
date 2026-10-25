@@ -275,8 +275,10 @@ check( 1000 === $wide['h'] && $wide['w'] < 2000 && $wide['x'] > 0, 'a wide photo
 $tall = TicketFrame::cover_crop( 1000, 3000, 1240, 1754 );
 check( 1000 === $tall['w'] && $tall['h'] < 3000 && $tall['y'] > 0, 'a tall photo is cropped top and bottom' );
 $covered = TicketFrame::photo_frame( 2000, 1000, 1240, 1754, 1000, 0, 0 );
-check( abs( $covered['h'] - 1754 ) < 0.05 && $covered['w'] > 1240, 'default zoom covers the ticket' );
-check( abs( ( $covered['x'] + $covered['w'] / 2 ) - 620 ) < 0.2, 'default zoom keeps the photo centered' );
+check( abs( $covered['w'] - 1240 ) < 0.2 && abs( $covered['h'] - 620 ) < 0.2, 'default zoom shows the whole wide photo' );
+check( abs( $covered['x'] ) < 0.2 && abs( $covered['y'] ) < 0.2, 'default zoom sits a wide photo at the top' );
+$tall_fit = TicketFrame::photo_frame( 1000, 3000, 1240, 1754, 1000, 0, 0 );
+check( abs( $tall_fit['h'] - 1754 ) < 0.2 && $tall_fit['w'] < 1240 && abs( ( $tall_fit['x'] + $tall_fit['w'] / 2 ) - 620 ) < 0.3, 'default zoom fits a tall photo and keeps it centered' );
 $zoomed = TicketFrame::photo_frame( 2000, 1000, 1240, 1754, 2000, 0, 0 );
 check( abs( $zoomed['w'] - ( $covered['w'] * 2 ) ) < 0.2 && abs( $zoomed['h'] - ( $covered['h'] * 2 ) ) < 0.2, '200 percent zoom doubles the photo' );
 $moved = TicketFrame::photo_frame( 2000, 1000, 1240, 1754, 1000, 100, -50 );
@@ -400,6 +402,98 @@ $dragged_pdf = ( new TicketPdf() )->render_order(
 );
 check( $image_x( $dragged_pdf ) > $image_x( $still_pdf ) + 50, 'the PDF moves the photo with the saved drag' );
 check( abs( $first_text_x( $dragged_pdf ) - $first_text_x( $still_pdf ) ) < 0.1, 'dragging the photo does not move the heading' );
+
+$layout_page = TicketFrame::size( 'a4' );
+$layout_blocks = TicketFrame::blocks_from(
+	array(
+		'block_heading_x' => 70,
+		'block_heading_y' => 48,
+		'block_date_x' => 80,
+		'block_date_y' => 240,
+		'block_qr_x' => 520,
+		'block_qr_y' => 220,
+	)
+);
+$layout_scene = TicketFrame::scene( 1600, 900, $layout_page['w'], $layout_page['h'], 1000, 120, 40, $layout_blocks );
+check( $layout_scene['photo']['h'] < ( $layout_page['h'] * 0.55 ) && abs( $layout_scene['photo']['w'] - $layout_page['w'] ) < 1, 'a saved wide photo fits the page width instead of covering it' );
+check( abs( ( $layout_scene['blocks']['heading']['x'] / $layout_page['w'] ) - 0.07 ) < 0.002, 'a saved heading keeps its per-mille origin' );
+check( abs( ( $layout_scene['blocks']['qr']['x'] / $layout_page['w'] ) - 0.52 ) < 0.002 && abs( ( $layout_scene['blocks']['qr']['w'] / $layout_page['w'] ) - 0.42 ) < 0.002, 'the QR box uses the designer fraction of the page' );
+$layout_pdf = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	array(
+		'heading' => 'Adgangsbillet',
+		'date' => 'lørdag 14. juni 2026',
+		'order_number' => 'FHB-00012',
+		'primary' => '#1F4B3A',
+		'text' => '#1C1C1C',
+		'background' => '#FFFBF5',
+		'show_event' => false,
+		'show_date' => true,
+		'show_time' => false,
+		'show_buyer' => false,
+		'show_price' => false,
+		'show_qr' => true,
+		'pad_blocks' => '1',
+		'ticket_size' => 'a4',
+		'bg_scale' => 1000,
+		'bg_x' => 120,
+		'bg_y' => 40,
+		'blocks' => $layout_blocks,
+	),
+	null,
+	array(
+		'data' => $jpeg,
+		'w' => 1600,
+		'h' => 900,
+	)
+);
+$same_fraction = static function ( array $got, array $want, float $page_w, float $page_h ): bool {
+	foreach ( array( 'x', 'y', 'w', 'h' ) as $key ) {
+		$span = ( 'x' === $key || 'w' === $key ) ? $page_w : $page_h;
+		if ( $span <= 0.0 || abs( $got[ $key ] - $want[ $key ] ) / $span > 0.002 ) {
+			return false;
+		}
+	}
+
+	return true;
+};
+$pdf_photo = null;
+if ( 1 === preg_match( '/re W n ([\d.]+) 0 0 ([\d.]+) ([\d.-]+) ([\d.-]+) cm/', $layout_pdf, $photo_match ) ) {
+	$draw_h = (float) $photo_match[2];
+	$pdf_photo = array(
+		'x' => (float) $photo_match[3],
+		'y' => $layout_page['h'] - (float) $photo_match[4] - $draw_h,
+		'w' => (float) $photo_match[1],
+		'h' => $draw_h,
+	);
+}
+check( is_array( $pdf_photo ) && $same_fraction( $pdf_photo, $layout_scene['photo'], $layout_page['w'], $layout_page['h'] ), 'saved background transform lands at the same place in the PDF' );
+preg_match_all( '/([\d.-]+) ([\d.-]+) ([\d.-]+) ([\d.-]+) re f/', $layout_pdf, $rect_matches, PREG_SET_ORDER );
+$pdf_rects = array();
+foreach ( $rect_matches as $rect_match ) {
+	$rect_h = (float) $rect_match[4];
+	$pdf_rects[] = array(
+		'x' => (float) $rect_match[1],
+		'y' => $layout_page['h'] - (float) $rect_match[2] - $rect_h,
+		'w' => (float) $rect_match[3],
+		'h' => $rect_h,
+	);
+}
+foreach ( array( 'heading', 'date', 'qr' ) as $layout_name ) {
+	$layout_found = false;
+	foreach ( $pdf_rects as $pdf_rect ) {
+		if ( $same_fraction( $pdf_rect, $layout_scene['blocks'][ $layout_name ], $layout_page['w'], $layout_page['h'] ) ) {
+			$layout_found = true;
+			break;
+		}
+	}
+	check( $layout_found, 'saved ' . $layout_name . ' box lands at the same place in the PDF' );
+}
 $placed['blocks'] = array( 'heading' => array( 'x' => 900, 'y' => 40 ) );
 $edge_pdf = ( new TicketPdf() )->render_order(
 	array(

@@ -1,6 +1,6 @@
 <?php
 /**
- * The printed ticket page, and how a photo is cropped to fill it.
+ * The printed ticket page, and how a photo is placed on it.
  *
  * @package ForsamlingshusBilletter
  */
@@ -140,7 +140,7 @@ final class TicketFrame {
 	}
 
 	/**
-	 * 1000 means the photo covers the page, centered. Smaller shows more paper.
+	 * 1000 fits the whole photo on the page. Smaller shows more paper. Larger zooms in.
 	 */
 	public static function photo_scale( mixed $value ): int {
 		if ( ! is_numeric( $value ) ) {
@@ -179,8 +179,10 @@ final class TicketFrame {
 	}
 
 	/**
-	 * Where the photo is drawn. Scale 1000 is a centered cover, matching tickets
-	 * saved before zoom existed. Offsets move only the photo.
+	 * Where the photo is drawn. Scale 1000 fits the whole photo: centered
+	 * sideways, flush with the top, so a wide poster keeps its full width and
+	 * the paper shows underneath. Larger zooms in from that fit. Offsets move
+	 * only the photo, per mille of the page. The designer uses the same sum.
 	 *
 	 * @return array{x:float,y:float,w:float,h:float}
 	 */
@@ -196,17 +198,70 @@ final class TicketFrame {
 				'h' => max( 0.0, $page_h ),
 			);
 		}
-		$cover = max( $page_w / $src_w, $page_h / $src_h );
-		$draw_w = $src_w * $cover * ( $scale / 1000 );
-		$draw_h = $src_h * $cover * ( $scale / 1000 );
-		$center_x = ( $page_w / 2 ) + ( $page_w * $offset_x / 1000 );
-		$center_y = ( $page_h / 2 ) + ( $page_h * $offset_y / 1000 );
+		$fit = min( $page_w / $src_w, $page_h / $src_h );
+		$draw_w = $src_w * $fit * ( $scale / 1000 );
+		$draw_h = $src_h * $fit * ( $scale / 1000 );
 
 		return array(
-			'x' => $center_x - ( $draw_w / 2 ),
-			'y' => $center_y - ( $draw_h / 2 ),
+			'x' => ( ( $page_w - $draw_w ) / 2 ) + ( $page_w * $offset_x / 1000 ),
+			'y' => $page_h * $offset_y / 1000,
 			'w' => $draw_w,
 			'h' => $draw_h,
+		);
+	}
+
+	/**
+	 * Box size as per mille of the page. The designer preview uses the same fractions.
+	 *
+	 * @return array{w:int,h:int}
+	 */
+	public static function block_span( string $name ): array {
+		return match ( $name ) {
+			'heading' => array(
+				'w' => 480,
+				'h' => 55,
+			),
+			'qr' => array(
+				'w' => 420,
+				'h' => 340,
+			),
+			'logo' => array(
+				'w' => 220,
+				'h' => 140,
+			),
+			default => array(
+				'w' => 460,
+				'h' => 90,
+			),
+		};
+	}
+
+	/**
+	 * Photo and element boxes in page units. The PDF draws these rectangles.
+	 *
+	 * @param array<string, array{x:int,y:int}> $blocks
+	 * @return array{photo:array{x:float,y:float,w:float,h:float},blocks:array<string,array{x:float,y:float,w:float,h:float}>}
+	 */
+	public static function scene( int $src_w, int $src_h, float $page_w, float $page_h, mixed $scale = 1000, mixed $offset_x = 0, mixed $offset_y = 0, array $blocks = array() ): array {
+		$photo = self::photo_frame( $src_w, $src_h, $page_w, $page_h, $scale, $offset_x, $offset_y );
+		$defaults = self::default_blocks();
+		$placed = array();
+		foreach ( self::BLOCKS as $name ) {
+			$pos = $blocks[ $name ] ?? $defaults[ $name ];
+			$span = self::block_span( $name );
+			$placed[ $name ] = self::place(
+				self::origin( $page_w, (int) ( $pos['x'] ?? $defaults[ $name ]['x'] ) ),
+				self::origin( $page_h, (int) ( $pos['y'] ?? $defaults[ $name ]['y'] ) ),
+				$page_w * $span['w'] / 1000,
+				$page_h * $span['h'] / 1000,
+				$page_w,
+				$page_h
+			);
+		}
+
+		return array(
+			'photo' => $photo,
+			'blocks' => $placed,
 		);
 	}
 

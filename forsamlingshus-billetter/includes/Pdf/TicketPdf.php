@@ -19,7 +19,8 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Renders the designed ticket. Callers pass already formatted Danish strings.
  *
- * Block positions come from the designer as per mille of the page. Text and
+ * Block positions and box sizes come from the designer as fractions of the
+ * page. The photo uses the same fit, zoom and offset as the preview. Text and
  * the logo can sit on a light pad. The QR code always has a white background,
  * and the manual code on that pad is black. Without the QR code, that text
  * uses the same color as the other fields.
@@ -61,18 +62,22 @@ final class TicketPdf {
 		$photo = is_array( $background ) && isset( $background['data'], $background['w'], $background['h'] ) && is_string( $background['data'] );
 		$pad_color = array( 255, 255, 255 );
 
+		$scene = TicketFrame::scene(
+			$photo ? (int) $background['w'] : 0,
+			$photo ? (int) $background['h'] : 0,
+			$page_w,
+			$page_h,
+			$context['bg_scale'] ?? 1000,
+			$context['bg_x'] ?? 0,
+			$context['bg_y'] ?? 0,
+			$blocks
+		);
+		$boxes = $scene['blocks'];
+
 		$doc->fill_rgb( $paper[0], $paper[1], $paper[2] );
 		$doc->rect( 0, 0, $page_w, $page_h, 'F' );
 		if ( $photo ) {
-			$frame = TicketFrame::photo_frame(
-				(int) $background['w'],
-				(int) $background['h'],
-				$page_w,
-				$page_h,
-				$context['bg_scale'] ?? 1000,
-				$context['bg_x'] ?? 0,
-				$context['bg_y'] ?? 0
-			);
+			$frame = $scene['photo'];
 			$doc->clipped_jpeg( $frame['x'], $frame['y'], $frame['w'], $frame['h'], $background['data'], (int) $background['w'], (int) $background['h'] );
 		}
 
@@ -82,15 +87,13 @@ final class TicketPdf {
 		$value_ink = ( $photo && ! $pads ) ? $text : $this->ink_on( $text, $surface );
 
 		if ( is_array( $logo ) && isset( $logo['data'], $logo['w'], $logo['h'] ) && is_string( $logo['data'] ) ) {
-			$this->place_logo( $doc, $logo, $page_w, $page_h, $blocks['logo'], $scale, $pads );
+			$this->place_logo( $doc, $logo, $boxes['logo'], $pads );
 		}
 
 		$this->place_heading(
 			$doc,
 			(string) ( $context['heading'] ?? 'Adgangsbillet' ),
-			$page_w,
-			$page_h,
-			$blocks['heading'],
+			$boxes['heading'],
 			$scale,
 			$label_ink,
 			$pads
@@ -107,7 +110,7 @@ final class TicketPdf {
 			if ( empty( $context[ $field[0] ] ) || '' === $field[2] ) {
 				continue;
 			}
-			$this->place_field( $doc, $field[1], $field[2], $page_w, $page_h, $blocks[ $name ], $scale, $label_ink, $value_ink, $pads );
+			$this->place_field( $doc, $field[1], $field[2], $boxes[ $name ], $scale, $label_ink, $value_ink, $pads );
 		}
 
 		$sequence = max( 1, (int) $ticket['sequence'] );
@@ -116,9 +119,7 @@ final class TicketPdf {
 			(string) $ticket['token'],
 			'Billet ' . $sequence . ' af ' . $total,
 			trim( (string) ( $context['order_number'] ?? '' ) ),
-			$page_w,
-			$page_h,
-			$blocks['qr'],
+			$boxes['qr'],
 			$scale,
 			! empty( $context['show_qr'] ),
 			$value_ink,
@@ -170,52 +171,40 @@ final class TicketPdf {
 	}
 
 	/**
-	 * @param array{x:int,y:int}       $block
-	 * @param array{0:int,1:int,2:int} $ink
+	 * @param array{x:float,y:float,w:float,h:float} $rect
+	 * @param array{0:int,1:int,2:int}               $ink
 	 */
-	private function place_heading( Document $doc, string $heading, float $page_w, float $page_h, array $block, float $scale, array $ink, bool $pads ): void {
-		$size = max( 13.0, 16.0 * $scale );
-		$x = TicketFrame::origin( $page_w, $block['x'] );
-		$y = TicketFrame::origin( $page_h, $block['y'] );
-		$natural = $doc->text_width( $heading, $size, true ) + 16;
-		$span = min( max( 48.0, $natural ), max( 48.0, $page_w - 16 ) );
-		$lines = max( 1, $this->line_count( $doc, $heading, $size, max( 32.0, $span - 16 ), true ) );
-		$box_h = 10 + ( $lines * ( $size + 3 ) );
-		$placed = TicketFrame::place( $x, $y, $span, $box_h, $page_w, $page_h );
-		$this->pad( $doc, $placed['x'], $placed['y'], $placed['w'], $placed['h'], $pads );
+	private function place_heading( Document $doc, string $heading, array $rect, float $scale, array $ink, bool $pads ): void {
+		$pad = 8.0;
+		$inner = max( 20.0, $rect['w'] - ( $pad * 2 ) );
+		$size = $this->fit_size( $doc, $heading, max( 13.0, 16.0 * $scale ), $inner, true );
+		$this->pad( $doc, $rect['x'], $rect['y'], $rect['w'], $rect['h'], $pads );
 		$doc->fill_rgb( $ink[0], $ink[1], $ink[2] );
-		$doc->paragraph( $placed['x'] + 8, $placed['y'] + $size + 2, $size, $heading, max( 32.0, $placed['w'] - 16 ), $size + 3, true );
+		$doc->paragraph( $rect['x'] + $pad, $rect['y'] + $size + 2, $size, $heading, $inner, $size + 3, true );
 	}
 
 	/**
-	 * @param array{x:int,y:int}       $block
-	 * @param array{0:int,1:int,2:int} $label_ink
-	 * @param array{0:int,1:int,2:int} $value_ink
+	 * @param array{x:float,y:float,w:float,h:float} $rect
+	 * @param array{0:int,1:int,2:int}               $label_ink
+	 * @param array{0:int,1:int,2:int}               $value_ink
 	 */
-	private function place_field( Document $doc, string $label, string $value, float $page_w, float $page_h, array $block, float $scale, array $label_ink, array $value_ink, bool $pads ): void {
-		$label_size = max( 8.0, 9.0 * $scale );
-		$value_size = max( 11.0, 13.0 * $scale );
-		$x = TicketFrame::origin( $page_w, $block['x'] );
-		$y = TicketFrame::origin( $page_h, $block['y'] );
-		$natural = max( $doc->text_width( $label, $label_size, true ), $doc->text_width( $value, $value_size, true ) ) + 16;
-		$span = min( max( 64.0, $natural ), max( 64.0, $page_w - 16 ) );
-		$lines = max( 1, $this->line_count( $doc, $value, $value_size, max( 40.0, $span - 16 ), true ) );
-		$box_h = 8 + $label_size + 2 + ( $lines * ( $value_size + 2 ) ) + 4;
-		$placed = TicketFrame::place( $x, $y, $span, $box_h, $page_w, $page_h );
-		$this->pad( $doc, $placed['x'], $placed['y'], $placed['w'], $placed['h'], $pads );
+	private function place_field( Document $doc, string $label, string $value, array $rect, float $scale, array $label_ink, array $value_ink, bool $pads ): void {
+		$pad = 8.0;
+		$inner = max( 20.0, $rect['w'] - ( $pad * 2 ) );
+		$label_size = $this->fit_size( $doc, $label, max( 8.0, 9.0 * $scale ), $inner, true );
+		$value_size = $this->fit_size( $doc, $value, max( 11.0, 13.0 * $scale ), $inner, true );
+		$this->pad( $doc, $rect['x'], $rect['y'], $rect['w'], $rect['h'], $pads );
 		$doc->fill_rgb( $label_ink[0], $label_ink[1], $label_ink[2] );
-		$doc->text( $placed['x'] + 8, $placed['y'] + $label_size + 2, $label_size, $label, true );
+		$doc->text( $rect['x'] + $pad, $rect['y'] + $label_size + 2, $label_size, $label, true );
 		$doc->fill_rgb( $value_ink[0], $value_ink[1], $value_ink[2] );
-		$doc->paragraph( $placed['x'] + 8, $placed['y'] + $label_size + $value_size + 4, $value_size, $value, max( 40.0, $placed['w'] - 16 ), $value_size + 2, true );
+		$doc->paragraph( $rect['x'] + $pad, $rect['y'] + $label_size + $value_size + 4, $value_size, $value, $inner, $value_size + 2, true );
 	}
 
 	/**
-	 * @param array{x:int,y:int}       $block
-	 * @param array{0:int,1:int,2:int} $ink Text color used when the QR code is off.
+	 * @param array{x:float,y:float,w:float,h:float} $rect
+	 * @param array{0:int,1:int,2:int}               $ink Text color used when the QR code is off.
 	 */
-	private function place_qr( Document $doc, string $token, string $ticket_label, string $order_number, float $page_w, float $page_h, array $block, float $scale, bool $show_qr, array $ink, bool $pads ): void {
-		$x = TicketFrame::origin( $page_w, $block['x'] );
-		$y = TicketFrame::origin( $page_h, $block['y'] );
+	private function place_qr( Document $doc, string $token, string $ticket_label, string $order_number, array $rect, float $scale, bool $show_qr, array $ink, bool $pads ): void {
 		$groups = preg_split( '/\s+/', trim( Token::grouped( $token ) ) );
 		$groups = is_array( $groups ) ? $groups : array();
 		$code_lines = array();
@@ -229,48 +218,40 @@ final class TicketPdf {
 		if ( '' !== $order_number ) {
 			array_unshift( $notes, $order_number );
 		}
-		$label_size = max( 9.0, 11.0 * $scale );
-		$code_size = max( 8.0, 9.5 * $scale );
-		$pad = 14.0;
-		$limit = max( 96.0, $page_w - $x - 8 );
+		$pad = min( 12.0, $rect['w'] * 0.06, $rect['h'] * 0.04 );
+		$inner = max( 20.0, $rect['w'] - ( $pad * 2 ) );
+		$label_size = max( 8.0, 11.0 * $scale );
+		$code_size = max( 7.0, 9.5 * $scale );
 		$text_w = $this->qr_text_width( $doc, $ticket_label, $code_lines, $notes, $label_size, $code_size );
-		while ( $code_size > 7 && $text_w > $limit ) {
-			$code_size -= 0.4;
-			$label_size = max( 8.0, $code_size + 1.5 );
+		while ( $code_size > 6 && $text_w > $inner ) {
+			$code_size -= 0.3;
+			$label_size = max( 7.0, $code_size + 1.5 );
 			$text_w = $this->qr_text_width( $doc, $ticket_label, $code_lines, $notes, $label_size, $code_size );
 		}
-		$qr = $show_qr ? min( 210.0, max( 96.0, min( $page_w, $page_h ) * 0.32 ), $limit - ( $pad * 2 ) ) : 0.0;
-		$box_w = min( $limit, max( $qr + ( $pad * 2 ), $text_w + 24 ) );
 		$line_h = $code_size + 3;
 		$text_h = $label_size + 6 + ( count( $code_lines ) * $line_h ) + ( count( $notes ) * $line_h );
-		$box_h = ( $show_qr ? $pad + $qr + 8 : 10 ) + $text_h + 8;
-		$placed = TicketFrame::place( $x, $y, $box_w, $box_h, $page_w, $page_h );
-		$fit = min( 1.0, $box_w > 0 ? $placed['w'] / $box_w : 1.0, $box_h > 0 ? $placed['h'] / $box_h : 1.0 );
-		$qr *= $fit;
-		$pad *= $fit;
-		$label_size *= $fit;
-		$code_size *= $fit;
-		$line_h *= $fit;
-		$baseline = $placed['y'] + 10 + $label_size;
+		$qr = 0.0;
+		$baseline = $rect['y'] + 8 + $label_size;
 		if ( $show_qr ) {
 			$doc->fill_rgb( 255, 255, 255 );
-			$doc->rect( $placed['x'], $placed['y'], $placed['w'], $placed['h'], 'F' );
+			$doc->rect( $rect['x'], $rect['y'], $rect['w'], $rect['h'], 'F' );
+			$qr = min( $inner, max( 16.0, $rect['h'] - $text_h - ( $pad * 2 ) ) );
 			$matrix = QrCode::matrix( Token::normalize( $token ) );
-			$doc->qr( $placed['x'] + ( ( $placed['w'] - $qr ) / 2 ), $placed['y'] + $pad, $qr, $matrix );
-			$baseline = $placed['y'] + $pad + $qr + 8 + $label_size;
+			$doc->qr( $rect['x'] + ( ( $rect['w'] - $qr ) / 2 ), $rect['y'] + $pad, $qr, $matrix );
+			$baseline = $rect['y'] + $pad + $qr + 6 + $label_size;
 			$doc->fill_rgb( 0, 0, 0 );
 		} else {
-			$this->pad( $doc, $placed['x'], $placed['y'], $placed['w'], $placed['h'], $pads );
+			$this->pad( $doc, $rect['x'], $rect['y'], $rect['w'], $rect['h'], $pads );
 			$doc->fill_rgb( $ink[0], $ink[1], $ink[2] );
 		}
-		$this->centered_in( $doc, $placed['x'], $placed['w'], $baseline, $label_size, $ticket_label, true );
+		$this->centered_in( $doc, $rect['x'], $rect['w'], $baseline, $label_size, $ticket_label, true );
 		$baseline += $line_h;
 		foreach ( $code_lines as $line ) {
-			$this->centered_in( $doc, $placed['x'], $placed['w'], $baseline, $code_size, $line, false );
+			$this->centered_in( $doc, $rect['x'], $rect['w'], $baseline, $code_size, $line, false );
 			$baseline += $line_h;
 		}
 		foreach ( $notes as $line ) {
-			$this->centered_in( $doc, $placed['x'], $placed['w'], $baseline, $code_size, $line, false );
+			$this->centered_in( $doc, $rect['x'], $rect['w'], $baseline, $code_size, $line, false );
 			$baseline += $line_h;
 		}
 	}
@@ -289,30 +270,39 @@ final class TicketPdf {
 	}
 
 	/**
-	 * @param array{data:string,w:int,h:int} $logo
-	 * @param array{x:int,y:int}              $block
+	 * @param array{data:string,w:int,h:int}         $logo
+	 * @param array{x:float,y:float,w:float,h:float} $rect
 	 */
-	private function place_logo( Document $doc, array $logo, float $page_w, float $page_h, array $block, float $scale, bool $pads ): void {
+	private function place_logo( Document $doc, array $logo, array $rect, bool $pads ): void {
 		$px_w = max( 1, (int) $logo['w'] );
 		$px_h = max( 1, (int) $logo['h'] );
-		$max_w = min( 120.0, $page_w * 0.28 ) * min( 1.0, $scale );
-		$max_h = min( 78.0, $page_h * 0.16 ) * min( 1.0, $scale );
-		$max_w = max( 48.0, $max_w );
-		$max_h = max( 32.0, $max_h );
-		$fit = min( $max_w / $px_w, $max_h / $px_h );
-		$w = $px_w * $fit;
-		$h = $px_h * $fit;
-		$x = TicketFrame::origin( $page_w, $block['x'] );
-		$y = TicketFrame::origin( $page_h, $block['y'] );
-		$pad = $pads ? 4.0 : 0.0;
-		$placed = TicketFrame::place( $x, $y, $w + ( $pad * 2 ), $h + ( $pad * 2 ), $page_w, $page_h );
-		$draw_w = max( 8.0, $placed['w'] - ( $pad * 2 ) );
-		$draw_h = max( 8.0, $placed['h'] - ( $pad * 2 ) );
+		$pad = $pads ? min( 4.0, $rect['w'] * 0.08, $rect['h'] * 0.08 ) : 0.0;
 		if ( $pads ) {
 			$doc->fill_rgb( 255, 255, 255 );
-			$doc->rect( $placed['x'], $placed['y'], $placed['w'], $placed['h'], 'F' );
+			$doc->rect( $rect['x'], $rect['y'], $rect['w'], $rect['h'], 'F' );
 		}
-		$doc->jpeg( $placed['x'] + $pad, $placed['y'] + $pad, $draw_w, $draw_h, $logo['data'], $px_w, $px_h );
+		$inner_w = max( 8.0, $rect['w'] - ( $pad * 2 ) );
+		$inner_h = max( 8.0, $rect['h'] - ( $pad * 2 ) );
+		$fit = min( $inner_w / $px_w, $inner_h / $px_h );
+		$draw_w = $px_w * $fit;
+		$draw_h = $px_h * $fit;
+		$doc->jpeg(
+			$rect['x'] + $pad + ( ( $inner_w - $draw_w ) / 2 ),
+			$rect['y'] + $pad + ( ( $inner_h - $draw_h ) / 2 ),
+			$draw_w,
+			$draw_h,
+			$logo['data'],
+			$px_w,
+			$px_h
+		);
+	}
+
+	private function fit_size( Document $doc, string $text, float $size, float $max_width, bool $bold ): float {
+		while ( $size > 6.0 && $doc->text_width( $text, $size, $bold ) > $max_width ) {
+			$size -= 0.4;
+		}
+
+		return $size;
 	}
 
 	private function pad( Document $doc, float $x, float $y, float $w, float $h, bool $on ): void {
@@ -327,30 +317,5 @@ final class TicketPdf {
 		$width = $doc->text_width( $text, $size, $bold );
 		$x = $box_x + max( 4, ( $box_w - $width ) / 2 );
 		$doc->text( $x, $baseline, $size, $text, $bold );
-	}
-
-	private function line_count( Document $doc, string $text, float $size, float $max_width, bool $bold ): int {
-		$words = preg_split( '/\s+/u', trim( $text ) );
-		if ( ! is_array( $words ) ) {
-			return 1;
-		}
-		$lines = 1;
-		$line = '';
-		foreach ( $words as $word ) {
-			if ( ! is_string( $word ) || '' === $word ) {
-				continue;
-			}
-			$candidate = '' === $line ? $word : $line . ' ' . $word;
-			if ( $doc->text_width( $candidate, $size, $bold ) <= $max_width ) {
-				$line = $candidate;
-				continue;
-			}
-			if ( '' !== $line ) {
-				++$lines;
-			}
-			$line = $word;
-		}
-
-		return max( 1, $lines );
 	}
 }
