@@ -30,6 +30,7 @@ require dirname( __DIR__ ) . '/includes/TicketFrame.php';
 require dirname( __DIR__ ) . '/includes/CouponRules.php';
 require dirname( __DIR__ ) . '/includes/Events.php';
 require dirname( __DIR__ ) . '/includes/Pdf/OrdersPdf.php';
+require dirname( __DIR__ ) . '/includes/OrderExport.php';
 
 use chillerlan\QRCode\Common\EccLevel;
 use chillerlan\QRCode\Output\QROutputInterface;
@@ -45,6 +46,7 @@ use Forsamlingshus\Billetter\Payments\StripeGateway;
 use Forsamlingshus\Billetter\Updates;
 use Forsamlingshus\Billetter\RefundRules;
 use Forsamlingshus\Billetter\Pdf\Document;
+use Forsamlingshus\Billetter\OrderExport;
 use Forsamlingshus\Billetter\Pdf\OrdersPdf;
 use Forsamlingshus\Billetter\Pdf\TicketPdf;
 use Forsamlingshus\Billetter\QrCode;
@@ -599,22 +601,94 @@ check( str_contains( $code_off, $grouped_first ), 'manual code stays on the tick
 check( str_contains( $code_off, '0.000 0.000 1.000 rg' ), 'manual code without the QR uses the ticket text color' );
 check( ! str_contains( $code_off, '1.000 1.000 1.000 rg' ), 'manual code without the QR has no white pad' );
 
+$kept = OrderExport::totals( 69800, 0, '', 34900, 2 );
+check( 69800 === $kept['amount_ore'] && false === $kept['repaired'], 'a stored order total is left alone' );
+$coupon_free = OrderExport::totals( 0, 25000, 'GRATIS', 12500, 2 );
+check( 0 === $coupon_free['amount_ore'] && 25000 === $coupon_free['discount_ore'] && false === $coupon_free['repaired'], 'a free coupon stays at zero' );
+$code_only = OrderExport::totals( 0, 0, 'SOMMER', 34900, 2 );
+check( 0 === $code_only['amount_ore'] && 69800 === $code_only['discount_ore'] && false === $code_only['repaired'], 'a coupon without a stored discount still shows the reduction' );
+$missing = OrderExport::totals( 0, 0, '', 34900, 2 );
+check( 69800 === $missing['amount_ore'] && true === $missing['repaired'], 'a zero without a coupon is repaired to the event price times quantity' );
+$free_event = OrderExport::totals( 0, 0, '', 0, 2 );
+check( 0 === $free_event['amount_ore'] && false === $free_event['repaired'], 'a free event stays at zero' );
+check( 'Betalingskort' === OrderExport::payment_label( 'stripe' ), 'export calls card payment Betalingskort' );
+check( '1.398,00' === OrderExport::amount_csv( 139800 ), 'csv amounts use a Danish decimal without kr' );
+$csv = OrderExport::csv(
+	array(
+		array(
+			'number' => 'FHB-00009',
+			'event' => 'Lørdagsfest',
+			'buyer' => 'Søren',
+			'email' => 'soren@example.test',
+			'phone' => '12 34 56 78',
+			'quantity' => 2,
+			'amount_ore' => 0,
+			'discount' => 'GRATIS · Rabat 698,00 kr.',
+			'payment' => 'Gratis',
+			'remark' => 'Vil gerne sidde; ved scenen',
+		),
+	)
+);
+check( str_starts_with( $csv, "\xEF\xBB\xBF" ), 'csv starts with a UTF-8 BOM' );
+check( str_contains( $csv, ';' ), 'csv uses a semicolon' );
+check( str_contains( $csv, 'Lørdagsfest' ) && str_contains( $csv, 'Søren' ), 'csv keeps Danish characters' );
+check( str_contains( $csv, '"Vil gerne sidde; ved scenen · GRATIS · Rabat 698,00 kr."' ), 'csv quotes a remark that contains a semicolon and shows the discount' );
+check( str_contains( $csv, 'Ordrenummer;Arrangement;Køber;E-mail;Telefon;Antal;Beløb;Betaling;Bemærkning' ), 'csv has the same columns as the order PDF' );
+
 $orders_pdf = ( new OrdersPdf() )->render(
 	array(
 		array(
 			'number' => 'FHB-00012',
-			'buyer' => 'Jens Hansen',
+			'event' => 'Lørdagsfest',
+			'buyer' => 'Søren',
+			'email' => 'soren@example.test',
+			'phone' => '12 34 56 78',
 			'quantity' => 4,
-			'remark' => 'Vil gerne sidde ved scenen',
 			'amount' => '600,00 kr.',
+			'amount_ore' => 60000,
+			'discount' => '',
+			'payment' => 'Betalingskort',
+			'remark' => 'Vil gerne sidde ved scenen',
+		),
+		array(
+			'number' => 'FHB-00013',
+			'event' => 'Lørdagsfest',
+			'buyer' => 'Anne',
+			'email' => 'anne@example.test',
+			'phone' => '87 65 43 21',
+			'quantity' => 1,
+			'amount' => '125,00 kr.',
+			'amount_ore' => 12500,
+			'discount' => '',
+			'payment' => 'Faktura',
+			'remark' => '',
+		),
+		array(
+			'number' => 'FHB-00009',
+			'event' => 'Lørdagsfest',
+			'buyer' => 'Bo',
+			'email' => 'bo@example.test',
+			'phone' => '11 22 33 44',
+			'quantity' => 2,
+			'amount' => '0,00 kr.',
+			'amount_ore' => 0,
+			'discount' => 'GRATIS · Rabat 250,00 kr.',
+			'payment' => 'Gratis',
+			'remark' => '',
 		),
 	),
 	'Ordrer',
-	'Fest'
+	'Alle arrangementer'
 );
 check( str_contains( $orders_pdf, 'K\\370ber' ) || str_contains( $orders_pdf, 'Køber' ), 'orders PDF has the buyer column' );
-check( str_contains( $orders_pdf, 'Billetter i alt: 4' ), 'orders PDF totals the tickets' );
+check( str_contains( $orders_pdf, 'E-mail' ) && str_contains( $orders_pdf, 'Telefon' ) && str_contains( $orders_pdf, 'Betaling' ), 'orders PDF has email, phone and payment' );
+check( str_contains( $orders_pdf, 'Bem\\346rkning' ) || str_contains( $orders_pdf, 'Bemærkning' ), 'orders PDF has the remark column' );
+check( str_contains( $orders_pdf, 'L\\370rdagsfest' ) || str_contains( $orders_pdf, 'Lørdagsfest' ), 'orders PDF keeps Danish characters' );
+check( str_contains( $orders_pdf, 'Billetter i alt: 7' ), 'orders PDF totals the tickets' );
+check( str_contains( $orders_pdf, 'Bel\\370b i alt: 725,00 kr.' ) || str_contains( $orders_pdf, 'Beløb i alt: 725,00 kr.' ), 'orders PDF sums the payable amounts' );
 check( str_contains( $orders_pdf, 'Vil gerne sidde ved scenen' ), 'orders PDF includes the remark' );
+check( ! str_contains( $orders_pdf, 'Bemærkning: ' ) && ! str_contains( $orders_pdf, 'Bem\\346rkning: ' ), 'orders PDF does not put the remark on its own line' );
+check( str_contains( $orders_pdf, 'GRATIS' ) && ( str_contains( $orders_pdf, 'Rabat 250,00 kr.' ) || str_contains( $orders_pdf, 'Rabat' ) ), 'a free coupon shows the discount in the order PDF' );
 
 $fields = StripeGateway::session_fields(
 	12,

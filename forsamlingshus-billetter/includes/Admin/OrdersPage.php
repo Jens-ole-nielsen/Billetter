@@ -15,6 +15,7 @@ use Forsamlingshus\Billetter\Format;
 use Forsamlingshus\Billetter\Fulfillment;
 use Forsamlingshus\Billetter\Mail\TicketMailer;
 use Forsamlingshus\Billetter\Money;
+use Forsamlingshus\Billetter\OrderExport;
 use Forsamlingshus\Billetter\OrderNumber;
 use Forsamlingshus\Billetter\OrderRepository;
 use Forsamlingshus\Billetter\OrderStatus;
@@ -105,7 +106,8 @@ final class OrdersPage {
 				<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event_id ); ?>">
 				<input type="hidden" name="status" value="<?php echo esc_attr( $status ); ?>">
 				<input type="hidden" name="s" value="<?php echo esc_attr( $search ); ?>">
-				<?php submit_button( __( 'Eksporter PDF', 'forsamlingshus-billetter' ), 'secondary', 'submit', false ); ?>
+				<?php submit_button( __( 'Eksporter PDF', 'forsamlingshus-billetter' ), 'secondary', 'fhb_export_pdf', false, 'style="margin-right:8px"' ); ?>
+				<?php submit_button( __( 'Eksporter CSV', 'forsamlingshus-billetter' ), 'secondary', 'fhb_export_csv', false ); ?>
 			</form>
 			<table class="widefat striped">
 				<thead>
@@ -259,25 +261,63 @@ final class OrdersPage {
 		$status = isset( $_POST['status'] ) ? sanitize_key( wp_unslash( $_POST['status'] ) ) : '';
 		$search = isset( $_POST['s'] ) ? sanitize_text_field( wp_unslash( $_POST['s'] ) ) : '';
 		$result = $this->orders->query( $event_id, $status, $search, 5000, 0 );
-		$rows = array();
-		foreach ( $result['rows'] as $order ) {
-			$rows[] = array(
-				'number' => OrderNumber::format( (int) $order->id ),
-				'buyer' => (string) $order->buyer_name,
-				'quantity' => (int) $order->quantity,
-				'remark' => (string) $order->remark,
-				'amount' => Money::format_ore( (int) $order->amount_ore ),
-			);
-		}
+		$rows = $this->export_rows( $result['rows'] );
 		$title = __( 'Ordrer', 'forsamlingshus-billetter' );
 		$subtitle = $event_id > 0 ? $this->event_title( $event_id ) : __( 'Alle arrangementer', 'forsamlingshus-billetter' );
-		$binary = ( new OrdersPdf() )->render( $rows, $title, $subtitle );
+		$csv = isset( $_POST['fhb_export_csv'] );
 		nocache_headers();
+		if ( $csv ) {
+			$body = OrderExport::csv( $rows );
+			header( 'Content-Type: text/csv; charset=UTF-8' );
+			header( 'Content-Disposition: attachment; filename="ordrer.csv"' );
+			header( 'Content-Length: ' . strlen( $body ) );
+			echo $body; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- CSV download.
+			exit;
+		}
+		$binary = ( new OrdersPdf() )->render( $rows, $title, $subtitle );
 		header( 'Content-Type: application/pdf' );
 		header( 'Content-Disposition: attachment; filename="ordrer.pdf"' );
 		header( 'Content-Length: ' . strlen( $binary ) );
 		echo $binary; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- binary PDF download.
 		exit;
+	}
+
+	/**
+	 * @param list<object> $orders
+	 * @return list<array{number:string,event:string,buyer:string,email:string,phone:string,quantity:int,amount:string,amount_ore:int,discount:string,payment:string,remark:string}>
+	 */
+	private function export_rows( array $orders ): array {
+		$rows = array();
+		foreach ( $orders as $order ) {
+			$event_id = (int) $order->event_id;
+			$event = Events::get( $event_id );
+			$unit = is_array( $event ) ? (int) ( $event['price_ore'] ?? 0 ) : 0;
+			$totals = OrderExport::totals(
+				(int) $order->amount_ore,
+				isset( $order->discount_ore ) ? (int) $order->discount_ore : 0,
+				isset( $order->coupon_code ) ? (string) $order->coupon_code : '',
+				$unit,
+				(int) $order->quantity
+			);
+			if ( $totals['repaired'] ) {
+				$this->orders->set_amount( (int) $order->id, $totals['amount_ore'] );
+			}
+			$rows[] = array(
+				'number' => OrderNumber::format( (int) $order->id ),
+				'event' => $this->event_title( $event_id ),
+				'buyer' => (string) $order->buyer_name,
+				'email' => (string) $order->buyer_email,
+				'phone' => (string) $order->buyer_phone,
+				'quantity' => (int) $order->quantity,
+				'amount' => Money::format_ore( $totals['amount_ore'] ),
+				'amount_ore' => $totals['amount_ore'],
+				'discount' => OrderExport::discount_label( $totals['coupon'], $totals['discount_ore'] ),
+				'payment' => OrderExport::payment_label( (string) $order->payment_method ),
+				'remark' => (string) $order->remark,
+			);
+		}
+
+		return $rows;
 	}
 
 	private function actions( object $order ): void {

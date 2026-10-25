@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.7.2
+Stable tag: 1.7.3
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,11 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.7.3 =
+* Ordre-PDF'en er en tæt oversigt med ordrenummer, arrangement, køber, e-mail, telefon, antal, beløb, betaling og bemærkning. Summen nederst følger rækkerne.
+* Et beløb på 0 kr. uden rabatkode sættes til arrangementets pris gange antal. En gratis ordre med rabatkode bliver på 0 kr., og rabatten vises.
+* Ved siden af Eksporter PDF ligger Eksporter CSV. Filen er UTF-8 med de samme kolonner og bruger semikolon, så Excel på dansk åbner den. Filteret for arrangement, status og søgning følges med.
 
 = 1.7.2 =
 * PDF-billetten bruger samme lærred som eksemplet under Billetdesign. Hele plakaten vises, med samme zoom og de samme felter. Den bliver ikke længere zoomet ind og beskåret.

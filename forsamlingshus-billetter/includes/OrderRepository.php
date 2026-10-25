@@ -149,6 +149,23 @@ final class OrderRepository {
 		);
 	}
 
+	public function set_amount( int $id, int $amount_ore ): bool {
+		global $wpdb;
+
+		$updated = $wpdb->update(
+			Database::orders_table(),
+			array(
+				'amount_ore' => max( 0, $amount_ore ),
+				'updated_at' => current_time( 'mysql' ),
+			),
+			array( 'id' => $id ),
+			array( '%d', '%s' ),
+			array( '%d' )
+		);
+
+		return false !== $updated;
+	}
+
 	public function touch_sent( int $id ): void {
 		global $wpdb;
 
