@@ -84,6 +84,34 @@
 	font: inherit;
 }
 
+.fhb-pay {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.85rem 1.4rem;
+	margin-top: 1.15rem;
+}
+
+.fhb-pay-amount {
+	margin: 0;
+	line-height: 1.15;
+}
+
+.fhb-pay-amount span {
+	display: block;
+	font-size: 0.95rem;
+	font-weight: 650;
+}
+
+.fhb-pay-amount strong {
+	font-size: 1.85rem;
+	font-weight: 700;
+}
+
+.fhb-form .fhb-pay button {
+	margin-top: 0;
+}
+
 .fhb-form button,
 .fhb-wrap a.fhb-button {
 	margin-top: 1rem;

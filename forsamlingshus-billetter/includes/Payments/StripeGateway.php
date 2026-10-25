@@ -38,11 +38,11 @@ final class StripeGateway implements PaymentMethod {
 	}
 
 	public function label(): string {
-		return __( 'Kort eller MobilePay', 'forsamlingshus-billetter' );
+		return __( 'Betalingskort', 'forsamlingshus-billetter' );
 	}
 
 	public function description(): string {
-		return __( 'Du sendes videre til Stripe. Der kan du betale med de metoder, som er slået til — typisk kort og MobilePay.', 'forsamlingshus-billetter' );
+		return __( 'Du sendes videre til Stripe. Der betaler du med betalingskort.', 'forsamlingshus-billetter' );
 	}
 
 	public function is_available( array $event ): bool {

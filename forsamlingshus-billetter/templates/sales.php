@@ -177,7 +177,6 @@ $description = wpautop( $description );
 				<label for="fhb-coupon"><?php esc_html_e( 'Rabatkode (valgfri)', 'forsamlingshus-billetter' ); ?></label>
 				<input type="text" id="fhb-coupon" name="coupon_code" maxlength="40" autocomplete="off" spellcheck="false">
 				<p id="fhb-coupon-message" class="description" hidden></p>
-				<p id="fhb-price-preview"><strong><?php esc_html_e( 'At betale:', 'forsamlingshus-billetter' ); ?></strong> <span data-fhb-payable><?php echo esc_html( $price ); ?></span></p>
 			<?php endif; ?>
 
 			<label for="fhb-remark"><?php esc_html_e( 'Bemærkning til ordren (valgfri)', 'forsamlingshus-billetter' ); ?></label>
@@ -202,7 +201,12 @@ $description = wpautop( $description );
 			<?php endif; ?>
 
 			<?php if ( $free || array() !== $methods ) : ?>
-				<button type="submit"><?php echo esc_html( $free ? __( 'Hent gratis billetter', 'forsamlingshus-billetter' ) : __( 'Gå til betaling', 'forsamlingshus-billetter' ) ); ?></button>
+				<div class="fhb-pay">
+					<button type="submit"><?php echo esc_html( $free ? __( 'Hent gratis billetter', 'forsamlingshus-billetter' ) : __( 'Gå til betaling', 'forsamlingshus-billetter' ) ); ?></button>
+					<?php if ( ! $free ) : ?>
+						<p id="fhb-price-preview" class="fhb-pay-amount"><span><?php esc_html_e( 'At betale', 'forsamlingshus-billetter' ); ?></span> <strong data-fhb-payable><?php echo esc_html( $price ); ?></strong></p>
+					<?php endif; ?>
+				</div>
 			<?php endif; ?>
 			<p class="description"><?php esc_html_e( 'Vi bruger navn, e-mail og telefon til at sende billetterne og til indtjekning.', 'forsamlingshus-billetter' ); ?></p>
 		</form>
