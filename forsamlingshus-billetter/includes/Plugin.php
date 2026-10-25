@@ -56,6 +56,7 @@ final class Plugin {
 		( new Integration() )->hooks();
 		( new Updates( $settings ) )->hooks();
 		( new EventPostType( $stock, $sales ) )->hooks();
+		( new EventReset( $stock ) )->hooks();
 		$sales->hooks();
 		( new Checkout( $orders, $stock, $methods, $fulfillment, $mailer ) )->hooks();
 		( new StripeWebhook( $settings, $orders, $fulfillment ) )->hooks();

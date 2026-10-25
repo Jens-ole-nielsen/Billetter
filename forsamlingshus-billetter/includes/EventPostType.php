@@ -175,6 +175,26 @@ final class EventPostType {
 					<?php endif; ?>
 				</td>
 			</tr>
+			<?php if ( 'auto-draft' !== $post->post_status ) : ?>
+				<tr>
+					<th scope="row"><?php esc_html_e( 'Nulstil salg', 'forsamlingshus-billetter' ); ?></th>
+					<td>
+						<?php $this->reset_button( $post ); ?>
+						<p class="description">
+							<?php
+							echo esc_html(
+								sprintf(
+									/* translators: 1: sold tickets, 2: reserved tickets */
+									__( 'Solgt lige nu: %1$d. Reserveret: %2$d. Knappen sletter kun ordrer og billetter til dette arrangement. Arrangementet bliver stående, og andre arrangementer røres ikke.', 'forsamlingshus-billetter' ),
+									$this->stock->sold( (int) $post->ID ),
+									$this->reserved( (int) $post->ID )
+								)
+							);
+							?>
+						</p>
+					</td>
+				</tr>
+			<?php endif; ?>
 		</table>
 		<?php
 	}
@@ -324,5 +344,32 @@ final class EventPostType {
 			FHB_VERSION,
 			true
 		);
+		wp_enqueue_script(
+			'fhb-event-reset',
+			FHB_URL . 'assets/js/event-reset.js',
+			array(),
+			FHB_VERSION,
+			true
+		);
+	}
+
+	private function reset_button( \WP_Post $post ): void {
+		$confirm = __( 'Alle ordrer og billetter til dette arrangement slettes, og det kan ikke fortrydes. Penge, der allerede er trukket i Stripe, bliver ikke refunderet.', 'forsamlingshus-billetter' );
+		echo '<button type="button" class="button button-secondary" id="fhb-reset-sales"';
+		echo ' data-confirm="' . esc_attr( $confirm ) . '"';
+		echo ' data-action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"';
+		echo ' data-event="' . esc_attr( (string) $post->ID ) . '"';
+		echo ' data-nonce="' . esc_attr( wp_create_nonce( 'fhb_reset_event_' . $post->ID ) ) . '">';
+		echo esc_html__( 'Nulstil solgte billetter', 'forsamlingshus-billetter' );
+		echo '</button>';
+	}
+
+	private function reserved( int $event_id ): int {
+		$row = $this->stock->get( $event_id );
+		if ( ! $row ) {
+			return 0;
+		}
+
+		return max( 0, (int) $row->reserved );
 	}
 }

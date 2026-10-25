@@ -39,10 +39,15 @@ Til test bruges `sk_test_` / `pk_test_` og en webhook-hemmelighed fra en test-en
 
 På hvert arrangement er der en afkrydsning: **Betaling via faktura (efter aftale)**.
 
-- Slået til: køberen kan vælge faktura. Ordren står som **Afventer betaling**, og billetterne sendes først, når en administrator markerer den som betalt.
-- Slået fra: der er kun Stripe.
+- Stripe er valgt på forhånd. En bestilling uden et aktivt skift starter Stripe Checkout.
+- Slået til: køberen kan skifte til faktura. Skiftet skal bekræftes, fordi faktura skal være aftalt på forhånd. Ordren står som **Afventer betaling**, og billetterne sendes først, når en administrator markerer den som betalt.
+- Slået fra: faktura vises ikke, og en indsendt fakturabetaling afvises.
 
 Faktura her er en aftale med huset. Pluginnet laver ikke en EAN- eller momsfaktura.
+
+## Nulstil et arrangement
+
+På **Billetter → Arrangementer**, i boksen **Billetsalg**, står knappen **Nulstil solgte billetter**. Den spørger først. Bekræftelsen siger, at alle ordrer og billetter til dette arrangement slettes, at det ikke kan fortrydes, og at penge allerede trukket i Stripe ikke refunderes. Annullerer I, sker der ingenting. Arrangementet selv bliver stående, og andre arrangementer røres ikke. Solgte og reserverede pladser går tilbage til nul.
 
 ## Opret et arrangement
 

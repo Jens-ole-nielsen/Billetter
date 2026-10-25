@@ -15,6 +15,7 @@ require dirname( __DIR__ ) . '/includes/Token.php';
 require dirname( __DIR__ ) . '/includes/Money.php';
 require dirname( __DIR__ ) . '/includes/OrderStatus.php';
 require dirname( __DIR__ ) . '/includes/RefundRules.php';
+require dirname( __DIR__ ) . '/includes/Payments/PaymentMethods.php';
 require dirname( __DIR__ ) . '/includes/Format.php';
 require dirname( __DIR__ ) . '/includes/StripeSignature.php';
 require dirname( __DIR__ ) . '/includes/Color.php';
@@ -31,6 +32,7 @@ use Forsamlingshus\Billetter\Capacity;
 use Forsamlingshus\Billetter\Format;
 use Forsamlingshus\Billetter\Color;
 use Forsamlingshus\Billetter\Money;
+use Forsamlingshus\Billetter\Payments\PaymentMethods;
 use Forsamlingshus\Billetter\RefundRules;
 use Forsamlingshus\Billetter\Pdf\Document;
 use Forsamlingshus\Billetter\Pdf\OrdersPdf;
@@ -117,6 +119,23 @@ check( 'full' === RefundRules::settlement( 25000, 25000 ), 'refunded total is fu
 check( array( 're_abc' ) === RefundRules::ids( ' re_abc , nope ' ), 'only Stripe refund ids are kept' );
 check( 're_abc,re_def' === RefundRules::with_id( 're_abc', 're_def' ), 'a new refund id is stored' );
 check( 're_abc' === RefundRules::with_id( 're_abc', 're_abc' ), 'the same refund id is not stored twice' );
+
+check(
+	array( 'stripe', 'invoice' ) === PaymentMethods::choose_ids( array( 'stripe', 'invoice' ), 12500, true ),
+	'stripe stays first when invoice is enabled'
+);
+check(
+	array( 'stripe' ) === PaymentMethods::choose_ids( array( 'stripe', 'invoice' ), 12500, false ),
+	'invoice is omitted when the event toggle is off'
+);
+check(
+	array( 'stripe', 'invoice' ) === PaymentMethods::choose_ids( array( 'invoice', 'stripe' ), 12500, true ),
+	'stripe is first even if invoice was registered first'
+);
+check(
+	array() === PaymentMethods::choose_ids( array( 'stripe', 'invoice' ), 0, true ),
+	'a free event has no payment choice'
+);
 
 $payload = '{"id":"evt_test"}';
 $secret = 'whsec_test_secret';

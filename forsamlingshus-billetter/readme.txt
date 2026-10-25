@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.2.0
+Stable tag: 1.3.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,10 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.3.0 =
+* Stripe er valgt på forhånd. Faktura vises kun, når den er slået til på arrangementet, og køberen skal bekræfte, at den er aftalt.
+* På arrangementet kan salget nulstilles. Ordrer og billetter til det arrangement slettes. Penge i Stripe refunderes ikke.
 
 = 1.2.0 =
 * En betalt Stripe-ordre kan refunderes helt eller delvist. Beløbet sendes til Stripe.

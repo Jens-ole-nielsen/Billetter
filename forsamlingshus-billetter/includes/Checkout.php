@@ -62,7 +62,10 @@ final class Checkout {
 		$qty = isset( $_POST['quantity'] ) ? absint( $_POST['quantity'] ) : 0;
 		$remark = isset( $_POST['remark'] ) ? sanitize_textarea_field( wp_unslash( $_POST['remark'] ) ) : '';
 		$remark = mb_substr( $remark, 0, 500 );
-		$method_id = isset( $_POST['payment_method'] ) ? sanitize_key( wp_unslash( $_POST['payment_method'] ) ) : 'stripe';
+		$method_id = isset( $_POST['payment_method'] ) ? sanitize_key( wp_unslash( $_POST['payment_method'] ) ) : '';
+		if ( '' === $method_id ) {
+			$method_id = 'stripe';
+		}
 
 		$digits = preg_replace( '/\D+/', '', $phone );
 		$digit_count = is_string( $digits ) ? strlen( $digits ) : 0;

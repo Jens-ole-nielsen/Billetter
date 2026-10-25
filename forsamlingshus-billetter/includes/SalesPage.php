@@ -90,12 +90,20 @@ final class SalesPage {
 			return;
 		}
 		wp_enqueue_style( 'fhb-front', FHB_URL . 'assets/css/front.css', array(), FHB_VERSION );
+		$this->enqueue_checkout_script();
 	}
 
 	public function print_late_style(): void {
 		if ( wp_style_is( 'fhb-front', 'enqueued' ) && ! wp_style_is( 'fhb-front', 'done' ) ) {
 			wp_print_styles( 'fhb-front' );
 		}
+		if ( wp_script_is( 'fhb-checkout', 'enqueued' ) && ! wp_script_is( 'fhb-checkout', 'done' ) ) {
+			wp_print_scripts( 'fhb-checkout' );
+		}
+	}
+
+	private function enqueue_checkout_script(): void {
+		wp_enqueue_script( 'fhb-checkout', FHB_URL . 'assets/js/checkout.js', array(), FHB_VERSION, true );
 	}
 
 	/**
@@ -109,6 +117,7 @@ final class SalesPage {
 		}
 
 		wp_enqueue_style( 'fhb-front', FHB_URL . 'assets/css/front.css', array(), FHB_VERSION );
+		$this->enqueue_checkout_script();
 
 		$result = isset( $_GET['fhb_result'] ) ? sanitize_key( wp_unslash( $_GET['fhb_result'] ) ) : '';
 		$error = isset( $_GET['fhb_error'] ) ? sanitize_key( wp_unslash( $_GET['fhb_error'] ) ) : '';
@@ -120,7 +129,7 @@ final class SalesPage {
 
 		$remaining = $this->stock->remaining( (int) $event['id'] );
 		$methods = array();
-		foreach ( $this->methods->available_for( $event ) as $method ) {
+		foreach ( $this->methods->for_checkout( $event ) as $method ) {
 			$methods[] = array(
 				'id' => $method->id(),
 				'label' => $method->label(),

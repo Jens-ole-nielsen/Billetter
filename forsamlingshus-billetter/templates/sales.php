@@ -110,7 +110,7 @@ $description = wpautop( $description );
 	<?php endif; ?>
 
 	<?php if ( $show_form ) : ?>
-		<form class="fhb-form fhb-card" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
+		<form class="fhb-form fhb-card" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-invoice-confirm="<?php echo esc_attr__( 'Betaling via faktura skal være aftalt med forsamlingshuset på forhånd. Vil du fortsætte med faktura?', 'forsamlingshus-billetter' ); ?>">
 			<input type="hidden" name="action" value="fhb_checkout">
 			<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event['id'] ); ?>">
 			<?php wp_nonce_field( 'fhb_checkout_' . (int) $event['id'], 'fhb_checkout_nonce' ); ?>
@@ -137,16 +137,16 @@ $description = wpautop( $description );
 			<?php if ( ! $free && count( $methods ) > 1 ) : ?>
 				<fieldset>
 					<legend><?php esc_html_e( 'Betaling', 'forsamlingshus-billetter' ); ?></legend>
-					<?php foreach ( $methods as $index => $method ) : ?>
+					<?php foreach ( $methods as $method ) : ?>
 						<label class="fhb-choice">
-							<input type="radio" name="payment_method" value="<?php echo esc_attr( $method['id'] ); ?>" <?php checked( 0 === $index ); ?> required>
+							<input type="radio" name="payment_method" value="<?php echo esc_attr( $method['id'] ); ?>" <?php checked( 'stripe' === $method['id'] ); ?> required>
 							<span><?php echo esc_html( $method['label'] ); ?></span>
 						</label>
 						<p class="description"><?php echo esc_html( $method['description'] ); ?></p>
 					<?php endforeach; ?>
 				</fieldset>
-			<?php elseif ( ! $free && 1 === count( $methods ) ) : ?>
-				<input type="hidden" name="payment_method" value="<?php echo esc_attr( $methods[0]['id'] ); ?>">
+			<?php elseif ( ! $free && 1 === count( $methods ) && 'stripe' === $methods[0]['id'] ) : ?>
+				<input type="hidden" name="payment_method" value="stripe">
 				<p class="description"><?php echo esc_html( $methods[0]['description'] ); ?></p>
 			<?php elseif ( ! $free ) : ?>
 				<p class="fhb-error"><?php esc_html_e( 'Der er ingen betalingsmåde slået til for dette arrangement.', 'forsamlingshus-billetter' ); ?></p>
