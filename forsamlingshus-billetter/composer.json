@@ -1,0 +1,15 @@
+{
+    "name": "forsamlingshus/billetter",
+    "description": "WordPress plugin for selling tickets at a Danish community hall.",
+    "license": "GPL-2.0-or-later",
+    "require": {
+        "php": ">=8.1",
+        "chillerlan/php-qrcode": "^5.0"
+    },
+    "scripts": {
+        "test": "php tests/run.php"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

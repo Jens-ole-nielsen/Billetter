@@ -1,0 +1,56 @@
+=== Forsamlingshus Billetter ===
+Contributors: jens-ole-nielsen
+Tags: tickets, events, stripe, mobilepay
+Requires at least: 6.4
+Tested up to: 6.4
+Requires PHP: 8.1
+Stable tag: 1.0.0
+License: GPLv2 or later
+License URI: https://www.gnu.org/licenses/gpl-2.0.html
+
+Sælg billetter til arrangementer i forsamlingshuset uden WooCommerce.
+
+== Description ==
+
+Pluginnet laver en salgsside, når I opretter et arrangement. Køberen betaler med Stripe Checkout (kort, MobilePay og de metoder, I har slået til) eller med faktura efter aftale. Billetterne sendes som én PDF med en QR-kode pr. billet. Dørvagten scanner koden og markerer den ene billet som fremmødt.
+
+== Installation ==
+
+1. Kopiér mappen `forsamlingshus-billetter` til `/wp-content/plugins/`.
+2. Aktivér pluginnet.
+3. Gå til Billetter → Indstillinger, og gem Stripe-nøglerne.
+
+== Stripe ==
+
+I skal bruge tre nøgler fra Stripe:
+
+* Publishable key, som starter med `pk_test_` eller `pk_live_`.
+* Secret key, som starter med `sk_test_` eller `sk_live_`.
+* Webhook secret, som starter med `whsec_`.
+
+Webhook-URL'en vises på indstillingssiden. Tilføj et endpoint i Stripe, og vælg `checkout.session.completed`, `checkout.session.async_payment_succeeded`, `checkout.session.async_payment_failed` og `checkout.session.expired`.
+
+Billetterne sendes først, når webhooken har tjekket signaturen og markeret ordren betalt.
+
+== Ofte stillede spørgsmål ==
+
+= Hvordan opretter jeg et arrangement? =
+
+Gå til Billetter → Arrangementer. Udfyld navn, beskrivelse, plakat, antal billetter, dato, tid og pris. Udgiv arrangementet. Salgssiden oprettes automatisk, og linket står i boksen Billetsalg.
+
+= Hvordan virker indtjekning? =
+
+En bruger med rollen Dørvagt åbner Billetter → Indtjekning, scanner QR-koden eller taster koden. Den ene billet bliver fremmødt. Scannes den igen, vises det, og I kan se, hvilke af køberens øvrige billetter der stadig er ubrugte. Kameraet kræver HTTPS.
+
+= Slettes ordrerne, hvis pluginnet deaktiveres? =
+
+Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `define( 'FHB_REMOVE_DATA', true );` i wp-config.php, før pluginnet slettes, hvis dataene også skal væk.
+
+= Kan jeg bruge Quickpay? =
+
+Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
+
+== Changelog ==
+
+= 1.0.0 =
+* Første version med arrangementer, Stripe Checkout, faktura, PDF-billetter, indtjekning og mail til købere.
