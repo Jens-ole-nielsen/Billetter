@@ -15,6 +15,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
+use Forsamlingshus\Billetter\CouponRules;
 use Forsamlingshus\Billetter\Format;
 use Forsamlingshus\Billetter\Money;
 
@@ -30,6 +31,11 @@ $errors = array(
 	'payment_key' => __( 'Stripe afviste nøglen. Tjek den hemmelige nøgle under Billetter → Indstillinger.', 'forsamlingshus-billetter' ),
 	'payment_url' => __( 'Stripe afviste adressen på salgssiden. Betalingen er ikke startet.', 'forsamlingshus-billetter' ),
 	'config' => __( 'Online betaling er ikke sat op endnu.', 'forsamlingshus-billetter' ),
+	'coupon_invalid' => CouponRules::message( 'invalid' ),
+	'coupon_inactive' => CouponRules::message( 'inactive' ),
+	'coupon_expired' => CouponRules::message( 'expired' ),
+	'coupon_used_up' => CouponRules::message( 'used_up' ),
+	'coupon_wrong_event' => CouponRules::message( 'wrong_event' ),
 );
 
 $title = (string) $event['title'];
@@ -59,18 +65,21 @@ $description = wpautop( $description );
 		<?php endif; ?>
 	</ul>
 	<p class="fhb-price"><?php echo esc_html( $free ? __( 'Gratis', 'forsamlingshus-billetter' ) : $price ); ?></p>
+	<?php $show_count = ! array_key_exists( 'show_remaining', $event ) || ! empty( $event['show_remaining'] ); ?>
 	<?php if ( $remaining > 0 ) : ?>
-		<p class="fhb-remaining">
-			<?php
-			echo esc_html(
-				sprintf(
-					/* translators: %d: number of tickets */
-					_n( '%d billet tilbage', '%d billetter tilbage', $remaining, 'forsamlingshus-billetter' ),
-					$remaining
-				)
-			);
-			?>
-		</p>
+		<?php if ( $show_count ) : ?>
+			<p class="fhb-remaining">
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: %d: number of tickets */
+						_n( '%d billet tilbage', '%d billetter tilbage', $remaining, 'forsamlingshus-billetter' ),
+						$remaining
+					)
+				);
+				?>
+			</p>
+		<?php endif; ?>
 	<?php elseif ( (int) $event['capacity'] < 1 ) : ?>
 		<p class="fhb-soldout"><?php esc_html_e( 'Salget er ikke åbnet endnu.', 'forsamlingshus-billetter' ); ?></p>
 	<?php else : ?>
@@ -113,11 +122,40 @@ $description = wpautop( $description );
 		<p class="fhb-error" role="status"><?php esc_html_e( 'Betalingen blev afbrudt. Pladserne frigives med det samme, eller senest når betalingslinket udløber efter ca. 30 minutter.', 'forsamlingshus-billetter' ); ?></p>
 	<?php endif; ?>
 
+	<?php if ( in_array( $result, array( 'success', 'invoice' ), true ) ) : ?>
+		<dialog id="fhb-thanks" class="fhb-dialog" aria-labelledby="fhb-thanks-title">
+			<h2 id="fhb-thanks-title"><?php echo 'invoice' === $result ? esc_html__( 'Bestillingen er modtaget', 'forsamlingshus-billetter' ) : esc_html__( 'Bestillingen er gennemført', 'forsamlingshus-billetter' ); ?></h2>
+			<?php if ( 'invoice' === $result ) : ?>
+				<p><?php esc_html_e( 'Du har valgt betaling via faktura efter aftale. Billetterne bliver sendt til din e-mail, når forsamlingshuset har registreret betalingen. Kig også i mappen med uønsket mail.', 'forsamlingshus-billetter' ); ?></p>
+			<?php elseif ( $order && 'paid' === (string) $order->status && ! empty( $order->tickets_sent_at ) ) : ?>
+				<p>
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: %s: buyer email */
+							__( 'Billetterne er sendt til %s. Kig også i mappen med uønsket mail.', 'forsamlingshus-billetter' ),
+							(string) $order->buyer_email
+						)
+					);
+					?>
+				</p>
+			<?php elseif ( $order && 'paid' === (string) $order->status ) : ?>
+				<p><?php esc_html_e( 'Betalingen er registreret. Hvis billetterne ikke er kommet på e-mail inden længe, så kontakt forsamlingshuset. Kig også i mappen med uønsket mail.', 'forsamlingshus-billetter' ); ?></p>
+			<?php else : ?>
+				<p><?php esc_html_e( 'Når betalingen er bekræftet, sender vi billetterne til den e-mail, du opgav. Kig også i mappen med uønsket mail.', 'forsamlingshus-billetter' ); ?></p>
+			<?php endif; ?>
+			<button type="button" id="fhb-thanks-close"><?php esc_html_e( 'Luk', 'forsamlingshus-billetter' ); ?></button>
+		</dialog>
+	<?php endif; ?>
+
 	<?php if ( $show_form ) : ?>
-		<form class="fhb-form fhb-card" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-invoice-confirm="<?php echo esc_attr__( 'Betaling via faktura skal være aftalt med forsamlingshuset på forhånd. Vil du fortsætte med faktura?', 'forsamlingshus-billetter' ); ?>">
+		<form class="fhb-form fhb-card" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-invoice-confirm="<?php echo esc_attr__( 'Betaling via faktura skal være aftalt med forsamlingshuset på forhånd. Vil du fortsætte med faktura?', 'forsamlingshus-billetter' ); ?>" data-unit="<?php echo esc_attr( (string) (int) $event['price_ore'] ); ?>" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-event="<?php echo esc_attr( (string) (int) $event['id'] ); ?>">
 			<input type="hidden" name="action" value="fhb_checkout">
 			<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event['id'] ); ?>">
 			<?php wp_nonce_field( 'fhb_checkout_' . (int) $event['id'], 'fhb_checkout_nonce' ); ?>
+			<?php if ( ! $free ) : ?>
+				<?php wp_nonce_field( 'fhb_coupon_' . (int) $event['id'], 'fhb_coupon_nonce' ); ?>
+			<?php endif; ?>
 			<p class="fhb-hp" aria-hidden="true">
 				<label for="fhb-company"><?php esc_html_e( 'Firma', 'forsamlingshus-billetter' ); ?></label>
 				<input type="text" id="fhb-company" name="fhb_company" tabindex="-1" autocomplete="off">
@@ -134,6 +172,13 @@ $description = wpautop( $description );
 			<label for="fhb-qty"><?php esc_html_e( 'Antal billetter', 'forsamlingshus-billetter' ); ?></label>
 			<input type="number" id="fhb-qty" name="quantity" required min="1" max="<?php echo esc_attr( (string) $max_qty ); ?>" value="1">
 			<p class="description"><?php esc_html_e( 'Navnet skrives på alle billetterne i ordren. Der skal ikke udfyldes et navn pr. billet.', 'forsamlingshus-billetter' ); ?></p>
+
+			<?php if ( ! $free ) : ?>
+				<label for="fhb-coupon"><?php esc_html_e( 'Rabatkode (valgfri)', 'forsamlingshus-billetter' ); ?></label>
+				<input type="text" id="fhb-coupon" name="coupon_code" maxlength="40" autocomplete="off" spellcheck="false">
+				<p id="fhb-coupon-message" class="description" hidden></p>
+				<p id="fhb-price-preview"><strong><?php esc_html_e( 'At betale:', 'forsamlingshus-billetter' ); ?></strong> <span data-fhb-payable><?php echo esc_html( $price ); ?></span></p>
+			<?php endif; ?>
 
 			<label for="fhb-remark"><?php esc_html_e( 'Bemærkning til ordren (valgfri)', 'forsamlingshus-billetter' ); ?></label>
 			<textarea id="fhb-remark" name="remark" rows="3" maxlength="500" placeholder="<?php esc_attr_e( 'F.eks. hvis I gerne vil sidde sammen med et andet selskab.', 'forsamlingshus-billetter' ); ?>"></textarea>

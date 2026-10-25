@@ -29,14 +29,16 @@ final class OrderRepository {
 
 		$prepared = $wpdb->prepare(
 			"INSERT INTO {$table}
-			(event_id, buyer_name, buyer_email, buyer_phone, quantity, amount_ore, currency, status, remark, payment_method, stripe_session_id, stripe_payment_intent, public_token, expires_at, paid_at, tickets_sent_at, failure_reason, created_at, updated_at)
-			VALUES (%d, %s, %s, %s, %d, %d, %s, %s, %s, %s, '', '', %s, {$expires_sql}, NULL, NULL, '', %s, %s)",
+			(event_id, buyer_name, buyer_email, buyer_phone, quantity, amount_ore, discount_ore, coupon_code, currency, status, remark, payment_method, stripe_session_id, stripe_payment_intent, public_token, expires_at, paid_at, tickets_sent_at, failure_reason, created_at, updated_at)
+			VALUES (%d, %s, %s, %s, %d, %d, %d, %s, %s, %s, %s, %s, '', '', %s, {$expires_sql}, NULL, NULL, '', %s, %s)",
 			(int) $data['event_id'],
 			(string) $data['buyer_name'],
 			(string) $data['buyer_email'],
 			(string) $data['buyer_phone'],
 			(int) $data['quantity'],
 			(int) $data['amount_ore'],
+			(int) ( $data['discount_ore'] ?? 0 ),
+			(string) ( $data['coupon_code'] ?? '' ),
 			'DKK',
 			(string) $data['status'],
 			(string) ( $data['remark'] ?? '' ),

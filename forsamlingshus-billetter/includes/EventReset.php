@@ -16,6 +16,7 @@ defined( 'ABSPATH' ) || exit;
 /**
  * Deletes orders and tickets for a single event and returns its stock to zero sold.
  *
+ * Coupon uses are counted from those orders, so deleting them releases the uses.
  * Money already captured in Stripe is not refunded.
  */
 final class EventReset {

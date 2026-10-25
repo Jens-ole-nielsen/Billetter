@@ -29,13 +29,16 @@ final class Checkout {
 		private Stock $stock,
 		private PaymentMethods $methods,
 		private Fulfillment $fulfillment,
-		private TicketMailer $mailer
+		private TicketMailer $mailer,
+		private CouponRepository $coupons
 	) {
 	}
 
 	public function hooks(): void {
 		add_action( 'admin_post_nopriv_fhb_checkout', array( $this, 'handle' ) );
 		add_action( 'admin_post_fhb_checkout', array( $this, 'handle' ) );
+		add_action( 'wp_ajax_fhb_coupon', array( $this, 'preview' ) );
+		add_action( 'wp_ajax_nopriv_fhb_coupon', array( $this, 'preview' ) );
 	}
 
 	public function handle(): void {
@@ -83,8 +86,13 @@ final class Checkout {
 		}
 
 		$unit = (int) $event['price_ore'];
-		$total = $unit * $qty;
-		if ( 0 === $unit ) {
+		$gross = $unit * $qty;
+		$quote = $this->quote( $event_id, $unit, $qty, $this->posted_code() );
+		if ( ! $quote['ok'] ) {
+			$this->fail( $event_id, 'coupon_' . $quote['error'] );
+		}
+		$total = $quote['payable_ore'];
+		if ( 0 === $total ) {
 			$method_id = 'free';
 		} elseif ( 'invoice' === $method_id ) {
 			if ( empty( $event['invoice'] ) ) {
@@ -99,7 +107,7 @@ final class Checkout {
 				$this->fail( $event_id, 'payment_key_missing' );
 			}
 			if ( $total < StripeGateway::MIN_ORE ) {
-				$this->fail( $event_id, 'stripe_min' );
+				$this->fail( $event_id, $quote['discount_ore'] > 0 ? 'payment_min' : 'stripe_min' );
 			}
 		} else {
 			$this->fail( $event_id, 'method' );
@@ -113,6 +121,24 @@ final class Checkout {
 
 		global $wpdb;
 		$wpdb->query( 'START TRANSACTION' );
+		if ( '' !== $quote['code'] ) {
+			$locked = $this->coupons->lock( $quote['code'] );
+			$again = $this->quote_row( $event_id, $unit, $qty, $locked, $this->coupons->count_uses( $quote['code'] ) );
+			if ( ! $again['ok'] ) {
+				$wpdb->query( 'ROLLBACK' );
+				$this->fail( $event_id, 'coupon_' . $again['error'] );
+			}
+			$quote = $again;
+			$total = $quote['payable_ore'];
+			if ( 0 === $total ) {
+				$method_id = 'free';
+				$status = OrderStatus::PENDING;
+				$expires = null;
+			} elseif ( 'stripe' === $method_id && $total < StripeGateway::MIN_ORE ) {
+				$wpdb->query( 'ROLLBACK' );
+				$this->fail( $event_id, 'payment_min' );
+			}
+		}
 		if ( ! $this->stock->reserve( $event_id, $qty ) ) {
 			$wpdb->query( 'ROLLBACK' );
 			$this->fail( $event_id, 'soldout' );
@@ -127,6 +153,8 @@ final class Checkout {
 				'buyer_phone' => $phone,
 				'quantity' => $qty,
 				'amount_ore' => $total,
+				'discount_ore' => $quote['discount_ore'],
+				'coupon_code' => $quote['code'],
 				'status' => $status,
 				'remark' => $remark,
 				'payment_method' => $method_id,
@@ -167,6 +195,7 @@ final class Checkout {
 				'public_token' => $public_token,
 				'buyer_email' => $email,
 				'quantity' => $qty,
+				'amount_ore' => $total,
 			);
 			$result = $gateway->begin( $order_data, $event );
 			wp_redirect( $result['redirect'] );
@@ -178,6 +207,156 @@ final class Checkout {
 			$this->fulfillment->cancel_unpaid( $order_id, true );
 			$this->fail( $event_id, StripeFailure::buyer_code( $exception->getMessage(), $exception->stripe_code, $exception->getCode() ) );
 		}
+	}
+
+	public function preview(): void {
+		$event_id = isset( $_POST['event_id'] ) ? absint( $_POST['event_id'] ) : 0;
+		$nonce = isset( $_POST['fhb_coupon_nonce'] ) ? sanitize_text_field( wp_unslash( $_POST['fhb_coupon_nonce'] ) ) : '';
+		if ( ! wp_verify_nonce( $nonce, 'fhb_coupon_' . $event_id ) ) {
+			wp_send_json(
+				array(
+					'ok' => false,
+					'message' => 'Sikkerhedstjekket fejlede. Opdater siden og prøv igen.',
+				)
+			);
+		}
+		$event = Events::get( $event_id );
+		if ( ! $event || 'publish' !== $event['status'] ) {
+			wp_send_json(
+				array(
+					'ok' => false,
+					'message' => 'Salget er lukket.',
+				)
+			);
+		}
+		$qty = isset( $_POST['quantity'] ) ? absint( $_POST['quantity'] ) : 1;
+		if ( $qty < 1 || $qty > self::MAX_PER_ORDER ) {
+			wp_send_json(
+				array(
+					'ok' => false,
+					'message' => 'Tjek antallet af billetter.',
+				)
+			);
+		}
+
+		$unit = (int) $event['price_ore'];
+		$code = $this->posted_code();
+		$quote = $this->quote( $event_id, $unit, $qty, $code );
+		if ( '' === $code ) {
+			wp_send_json(
+				array(
+					'ok' => true,
+					'payable_ore' => $quote['payable_ore'],
+					'discount_ore' => 0,
+					'message' => '',
+				)
+			);
+		}
+		if ( ! $quote['ok'] ) {
+			wp_send_json(
+				array(
+					'ok' => false,
+					'payable_ore' => $unit * $qty,
+					'discount_ore' => 0,
+					'message' => CouponRules::message( $quote['error'] ),
+				)
+			);
+		}
+		wp_send_json(
+			array(
+				'ok' => true,
+				'payable_ore' => $quote['payable_ore'],
+				'discount_ore' => $quote['discount_ore'],
+				'message' => 'Rabatten er trukket fra.',
+			)
+		);
+	}
+
+	private function posted_code(): string {
+		$raw = isset( $_POST['coupon_code'] ) ? wp_unslash( $_POST['coupon_code'] ) : '';
+		if ( ! is_string( $raw ) ) {
+			return '';
+		}
+
+		return CouponRules::normalize( sanitize_text_field( $raw ) );
+	}
+
+	/**
+	 * @return array{ok:bool,error:string,code:string,payable_ore:int,discount_ore:int,gross_ore:int}
+	 */
+	private function quote( int $event_id, int $unit, int $qty, string $code ): array {
+		$gross = $unit * $qty;
+		if ( '' === $code ) {
+			return array(
+				'ok' => true,
+				'error' => '',
+				'code' => '',
+				'payable_ore' => $gross,
+				'discount_ore' => 0,
+				'gross_ore' => $gross,
+			);
+		}
+		if ( ! CouponRules::valid_code( $code ) ) {
+			return array(
+				'ok' => false,
+				'error' => 'invalid',
+				'code' => '',
+				'payable_ore' => $gross,
+				'discount_ore' => 0,
+				'gross_ore' => $gross,
+			);
+		}
+
+		$row = $this->coupons->find_by_code( $code );
+
+		return $this->quote_row( $event_id, $unit, $qty, $row, $row ? $this->coupons->count_uses( $code ) : 0 );
+	}
+
+	/**
+	 * @return array{ok:bool,error:string,code:string,payable_ore:int,discount_ore:int,gross_ore:int}
+	 */
+	private function quote_row( int $event_id, int $unit, int $qty, ?object $row, int $uses ): array {
+		$gross = $unit * $qty;
+		$rejected = array(
+			'ok' => false,
+			'error' => 'invalid',
+			'code' => '',
+			'payable_ore' => $gross,
+			'discount_ore' => 0,
+			'gross_ore' => $gross,
+		);
+		if ( ! $row ) {
+			return $rejected;
+		}
+		$expires = isset( $row->expires_on ) && is_string( $row->expires_on ) ? substr( $row->expires_on, 0, 10 ) : '';
+		if ( '0000-00-00' === $expires ) {
+			$expires = '';
+		}
+		$decision = CouponRules::accept(
+			true,
+			! empty( $row->active ),
+			$expires,
+			wp_date( 'Y-m-d' ),
+			(int) $row->event_id,
+			$event_id,
+			(int) $row->max_uses,
+			$uses
+		);
+		if ( ! $decision['ok'] ) {
+			$rejected['error'] = $decision['error'];
+
+			return $rejected;
+		}
+		$priced = CouponRules::price( $unit, $qty, (string) $row->type, (int) $row->percent, (int) $row->free_tickets );
+
+		return array(
+			'ok' => true,
+			'error' => '',
+			'code' => (string) $row->code,
+			'payable_ore' => $priced['payable_ore'],
+			'discount_ore' => $priced['discount_ore'],
+			'gross_ore' => $priced['gross_ore'],
+		);
 	}
 
 	/**

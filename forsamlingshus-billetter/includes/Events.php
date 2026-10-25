@@ -41,8 +41,17 @@ final class Events {
 			'price_ore' => (int) get_post_meta( $id, '_fhb_price_ore', true ),
 			'invoice' => '1' === (string) get_post_meta( $id, '_fhb_invoice', true ),
 			'poster_id' => (int) get_post_meta( $id, '_fhb_poster_id', true ),
+			'ticket_image_id' => (int) get_post_meta( $id, '_fhb_ticket_image_id', true ),
+			'show_remaining' => self::shows_remaining_count( (string) get_post_meta( $id, '_fhb_show_remaining', true ) ),
 			'sales_page_id' => (int) get_post_meta( $id, '_fhb_sales_page_id', true ),
 		);
+	}
+
+	/**
+	 * Missing or any value other than 0 keeps the public count, so existing events stay unchanged.
+	 */
+	public static function shows_remaining_count( string $stored ): bool {
+		return '0' !== $stored;
 	}
 
 	/**

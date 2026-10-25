@@ -55,14 +55,23 @@ final class StripeGateway implements PaymentMethod {
 		if ( '' === $name ) {
 			$name = 'Billet';
 		}
+		$quantity = (int) $order['quantity'];
+		$unit = (int) $event['price_ore'];
+		if ( isset( $order['amount_ore'] ) ) {
+			$unit = (int) $order['amount_ore'];
+			if ( $quantity > 1 ) {
+				$name = mb_substr( $name . ' (' . $quantity . ' billetter)', 0, 120 );
+			}
+			$quantity = 1;
+		}
 
 		$session = $client->post(
 			'checkout/sessions',
 			self::session_fields(
 				(int) $order['id'],
 				(string) $order['buyer_email'],
-				(int) $order['quantity'],
-				(int) $event['price_ore'],
+				$quantity,
+				$unit,
 				$name,
 				(int) $event['id'],
 				$this->return_url( $event, 'success', (string) $order['public_token'] ),

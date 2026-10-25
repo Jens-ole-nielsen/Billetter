@@ -11,6 +11,7 @@ namespace Forsamlingshus\Billetter;
 
 use Forsamlingshus\Billetter\Admin\BroadcastPage;
 use Forsamlingshus\Billetter\Admin\CheckinPage;
+use Forsamlingshus\Billetter\Admin\CouponsPage;
 use Forsamlingshus\Billetter\Admin\DesignPage;
 use Forsamlingshus\Billetter\Admin\Menu;
 use Forsamlingshus\Billetter\Admin\Notices;
@@ -58,12 +59,14 @@ final class Plugin {
 		( new EventPostType( $stock, $sales ) )->hooks();
 		( new EventReset( $stock ) )->hooks();
 		$sales->hooks();
-		( new Checkout( $orders, $stock, $methods, $fulfillment, $mailer ) )->hooks();
+		$coupons = new CouponRepository();
+		( new Checkout( $orders, $stock, $methods, $fulfillment, $mailer, $coupons ) )->hooks();
 		( new StripeWebhook( $settings, $orders, $fulfillment ) )->hooks();
 		( new Cron( $fulfillment ) )->hooks();
 		( new Privacy( $orders ) )->hooks();
 		( new Menu() )->hooks();
 		( new OrdersPage( $orders, $fulfillment, $mailer, $tickets, $refunds ) )->hooks();
+		( new CouponsPage( $coupons ) )->hooks();
 		( new ParticipantsPage( $tickets ) )->hooks();
 		( new DesignPage( $design ) )->hooks();
 		( new SettingsPage( $settings ) )->hooks();

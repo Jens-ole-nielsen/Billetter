@@ -62,7 +62,18 @@ final class DesignPage {
 		?>
 		<div class="wrap fhb-design-wrap">
 			<h1><?php esc_html_e( 'Billetdesign', 'forsamlingshus-billetter' ); ?></h1>
-			<p><?php esc_html_e( 'Vælg logo, overskrift, farver og hvilke felter der skal med på billetten. Forhåndsvisningen er et eksempel og følger dine valg.', 'forsamlingshus-billetter' ); ?></p>
+			<p><?php esc_html_e( 'Vælg logo, overskrift, farver og hvilke felter der skal med på billetten. Forhåndsvisningen er et eksempel uden arrangementets billede.', 'forsamlingshus-billetter' ); ?></p>
+			<p class="description">
+				<?php
+				echo esc_html(
+					sprintf(
+						/* translators: %s: pixel size and orientation, for example 1240 × 1754 pixels, stående */
+						__( 'Har arrangementet et billede, fylder det hele billetten. Det skaleres og beskæres, så det passer. Tekst, logo og QR-kode tegnes ovenpå, og QR-koden står på en lys flade. Uden billede er billetten ensfarvet, som i eksemplet. Formatet, der passer til billetten, er %s.', 'forsamlingshus-billetter' ),
+						\Forsamlingshus\Billetter\TicketFrame::fit_label()
+					)
+				);
+				?>
+			</p>
 			<div class="fhb-design-layout">
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<?php wp_nonce_field( 'fhb_save_design' ); ?>
@@ -125,11 +136,9 @@ final class DesignPage {
 				<div>
 					<h2><?php esc_html_e( 'Eksempel', 'forsamlingshus-billetter' ); ?></h2>
 					<article id="fhb-ticket-preview" class="fhb-ticket-preview" style="<?php echo esc_attr( $this->preview_style( $design ) ); ?>">
-						<header class="fhb-ticket-banner">
-							<strong data-fhb-preview="heading"><?php echo esc_html( (string) $design['heading'] ); ?></strong>
-							<img data-fhb-preview="logo" alt="" <?php echo is_string( $logo ) && '' !== $logo ? 'src="' . esc_url( $logo ) . '"' : 'hidden'; ?>>
-						</header>
+						<img class="fhb-ticket-logo" data-fhb-preview="logo" alt="" <?php echo is_string( $logo ) && '' !== $logo ? 'src="' . esc_url( $logo ) . '"' : 'hidden'; ?>>
 						<div class="fhb-ticket-body">
+							<strong class="fhb-ticket-heading" data-fhb-preview="heading"><?php echo esc_html( (string) $design['heading'] ); ?></strong>
 							<p data-fhb-row="show_event"><span><?php esc_html_e( 'Arrangement', 'forsamlingshus-billetter' ); ?></span><strong><?php esc_html_e( 'Fest i forsamlingshuset', 'forsamlingshus-billetter' ); ?></strong></p>
 							<p data-fhb-row="show_date"><span><?php esc_html_e( 'Dato', 'forsamlingshus-billetter' ); ?></span><strong><?php esc_html_e( 'lørdag 14. juni 2026', 'forsamlingshus-billetter' ); ?></strong></p>
 							<p data-fhb-row="show_time"><span><?php esc_html_e( 'Tidspunkt', 'forsamlingshus-billetter' ); ?></span><strong>19:00</strong></p>

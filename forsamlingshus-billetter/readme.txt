@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.3.1
+Stable tag: 1.4.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,15 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.4.0 =
+* Rabatkoder under Billetter → Rabatkoder: procent, et antal gratis billetter, eller hele ordren gratis. En kode kan gælde ét arrangement eller alle, og den kan have et maks. antal brug.
+* Køberen kan skrive koden på salgssiden og se det nye beløb. En ugyldig, udløbet, opbrugt eller forkert kode ændrer ikke prisen.
+* Er beløbet 0 kr., sendes billetterne med det samme, uden Stripe. Er beløbet over 0 men under 2,50 kr., oprettes ordren ikke.
+* Ordren viser koden og rabatten. Nulstilling af et arrangement frigiver de koder, ordrerne brugte.
+* Den indbyggede billet har ikke længere en grøn bjælke. Arrangementets billede fylder siden, og tekst, logo og QR-kode tegnes ovenpå. QR-koden står på en lys flade. Uden billede er billetten ensfarvet.
+* Når bestillingen er gennemført, vises en dialog foran siden. Den siger, at billetterne er sendt, og minder om mappen med uønsket mail. Det gælder Stripe, faktura og gratis ordrer.
+* På arrangementet kan I slå «hvor mange billetter der er tilbage» fra på salgssiden. Den er slået til som standard. Administrationen viser stadig solgte og ledige.
 
 = 1.3.1 =
 * Betaling starter i Stripe Checkout. Sessionen bruger ikke længere et parameter, Stripe afviser.

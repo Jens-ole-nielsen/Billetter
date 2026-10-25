@@ -138,7 +138,7 @@ final class OrdersPage {
 							</td>
 							<td><?php echo esc_html( $this->event_title( (int) $order->event_id ) ); ?></td>
 							<td><?php echo esc_html( (string) (int) $order->quantity ); ?></td>
-							<td><?php echo esc_html( Money::format_ore( (int) $order->amount_ore ) ); ?></td>
+							<td><?php $this->amount_cell( $order ); ?></td>
 							<td>
 								<?php echo esc_html( OrderStatus::label( (string) $order->status ) ); ?>
 								<?php $this->refund_lines( $order ); ?>
@@ -433,7 +433,7 @@ final class OrdersPage {
 					</tr>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Beløb', 'forsamlingshus-billetter' ); ?></th>
-						<td><?php echo esc_html( Money::format_ore( (int) $order->amount_ore ) ); ?></td>
+						<td><?php $this->amount_cell( $order ); ?></td>
 					</tr>
 					<tr>
 						<th scope="row"><?php esc_html_e( 'Refunderet', 'forsamlingshus-billetter' ); ?></th>
@@ -518,6 +518,27 @@ final class OrdersPage {
 			<?php submit_button( __( 'Refunder delvist', 'forsamlingshus-billetter' ), 'secondary', 'submit', false ); ?>
 		</form>
 		<?php
+	}
+
+	private function amount_cell( object $order ): void {
+		echo esc_html( Money::format_ore( (int) $order->amount_ore ) );
+		$code = isset( $order->coupon_code ) ? (string) $order->coupon_code : '';
+		$discount = isset( $order->discount_ore ) ? (int) $order->discount_ore : 0;
+		if ( '' === $code && $discount < 1 ) {
+			return;
+		}
+		echo '<br><span class="description">';
+		if ( '' !== $code ) {
+			echo esc_html( $code );
+		}
+		if ( $discount > 0 ) {
+			echo esc_html( ( '' !== $code ? ' · ' : '' ) . sprintf(
+				/* translators: %s: discount amount */
+				__( 'Rabat %s', 'forsamlingshus-billetter' ),
+				Money::format_ore( $discount )
+			) );
+		}
+		echo '</span>';
 	}
 
 	private function payment_cell( object $order ): void {

@@ -6,30 +6,33 @@
 }
 
 .fhb-ticket-preview {
-	background: var(--fhb-bg, #fffbf5);
+	position: relative;
+	background-color: var(--fhb-bg, #fffbf5);
+	background-position: center;
+	background-size: cover;
 	color: var(--fhb-text, #1c1c1c);
 	border: 1px solid #ddd;
 	border-radius: 12px;
 	overflow: hidden;
 	max-width: 380px;
+	aspect-ratio: 1240 / 1754;
 }
 
-.fhb-ticket-banner {
-	background: var(--fhb-primary, #1f4b3a);
-	color: #fff;
-	display: flex;
-	justify-content: space-between;
-	align-items: center;
-	gap: 12px;
-	padding: 16px;
-	min-height: 72px;
-}
-
-.fhb-ticket-banner img {
+.fhb-ticket-logo {
+	position: absolute;
+	top: 16px;
+	right: 16px;
 	max-width: 88px;
 	max-height: 56px;
 	background: #fff;
 	object-fit: contain;
+}
+
+.fhb-ticket-heading {
+	display: block;
+	margin: 0 96px 12px 0;
+	color: var(--fhb-primary, #1f4b3a);
+	font-size: 1.25rem;
 }
 
 .fhb-ticket-body {
@@ -47,11 +50,18 @@
 	font-weight: 700;
 }
 
+.fhb-ticket-qr {
+	width: fit-content;
+	margin: 12px auto;
+	padding: 12px 12px 4px;
+	background: #fff;
+}
+
 .fhb-ticket-qr svg {
 	width: 180px;
 	height: auto;
 	display: block;
-	margin: 12px auto;
+	margin: 0 auto 8px;
 	background: #fff;
 }
 

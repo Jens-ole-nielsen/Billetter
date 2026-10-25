@@ -26,6 +26,7 @@ require_once __DIR__ . '/includes/Capabilities.php';
 use Forsamlingshus\Billetter\Capabilities;
 use Forsamlingshus\Billetter\Database;
 
+$wpdb->query( 'DROP TABLE IF EXISTS ' . Database::coupons_table() );
 $wpdb->query( 'DROP TABLE IF EXISTS ' . Database::tickets_table() );
 $wpdb->query( 'DROP TABLE IF EXISTS ' . Database::orders_table() );
 $wpdb->query( 'DROP TABLE IF EXISTS ' . Database::stock_table() );

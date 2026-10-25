@@ -100,6 +100,8 @@ final class EventPostType {
 		}
 		$invoice = $event && ! empty( $event['invoice'] );
 		$poster_id = $event ? (int) $event['poster_id'] : 0;
+		$ticket_image_id = $event ? (int) ( $event['ticket_image_id'] ?? 0 ) : 0;
+		$ticket_image = $ticket_image_id ? wp_get_attachment_image( $ticket_image_id, 'medium', false, array( 'style' => 'max-width:240px;height:auto;' ) ) : '';
 		$page_id = $event ? (int) $event['sales_page_id'] : 0;
 		$remaining = $this->stock->remaining( (int) $post->ID );
 		$permalink = $page_id > 0 ? get_permalink( $page_id ) : '';
@@ -121,6 +123,29 @@ final class EventPostType {
 						<button type="button" class="button fhb-media-pick" data-target="fhb-poster-id" data-preview="fhb-poster-preview"><?php esc_html_e( 'Vælg plakat', 'forsamlingshus-billetter' ); ?></button>
 						<button type="button" class="button fhb-media-clear" data-target="fhb-poster-id" data-preview="fhb-poster-preview"><?php esc_html_e( 'Fjern', 'forsamlingshus-billetter' ); ?></button>
 					</p>
+					<p class="description"><?php esc_html_e( 'Plakaten vises på salgssiden. Uden et billede nedenfor bruges den også på billetten.', 'forsamlingshus-billetter' ); ?></p>
+				</td>
+			</tr>
+			<tr>
+				<th scope="row"><label for="fhb-ticket-image-id"><?php esc_html_e( 'Billede på billetten', 'forsamlingshus-billetter' ); ?></label></th>
+				<td>
+					<input type="hidden" id="fhb-ticket-image-id" name="fhb_ticket_image_id" value="<?php echo esc_attr( (string) $ticket_image_id ); ?>">
+					<div id="fhb-ticket-image-preview"><?php echo $ticket_image; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- attachment image from WordPress. ?></div>
+					<p>
+						<button type="button" class="button fhb-media-pick" data-target="fhb-ticket-image-id" data-preview="fhb-ticket-image-preview"><?php esc_html_e( 'Vælg billede', 'forsamlingshus-billetter' ); ?></button>
+						<button type="button" class="button fhb-media-clear" data-target="fhb-ticket-image-id" data-preview="fhb-ticket-image-preview"><?php esc_html_e( 'Brug plakaten', 'forsamlingshus-billetter' ); ?></button>
+					</p>
+					<p class="description">
+						<?php
+						echo esc_html(
+							sprintf(
+								/* translators: %s: pixel size and orientation, for example 1240 × 1754 pixels, stående */
+								__( 'Tomt felt bruger plakaten. Billedet skaleres og beskæres, så det fylder hele billetten. Uden billede er billetten ensfarvet. Formatet, der passer, er %s.', 'forsamlingshus-billetter' ),
+								TicketFrame::fit_label()
+							)
+						);
+						?>
+					</p>
 				</td>
 			</tr>
 			<tr>
@@ -138,6 +163,11 @@ final class EventPostType {
 						);
 						?>
 					</p>
+					<label for="fhb-show-remaining">
+						<input type="checkbox" id="fhb-show-remaining" name="fhb_show_remaining" value="1" <?php checked( ! $event || ! empty( $event['show_remaining'] ) ); ?>>
+						<?php esc_html_e( 'Vis, hvor mange billetter der er tilbage, på salgssiden', 'forsamlingshus-billetter' ); ?>
+					</label>
+					<p class="description"><?php esc_html_e( 'Slået til som standard. Slår du den fra, skjules tallet for køberne. Her i administrationen kan I stadig se solgte og ledige.', 'forsamlingshus-billetter' ); ?></p>
 				</td>
 			</tr>
 			<tr>
@@ -223,6 +253,10 @@ final class EventPostType {
 		if ( $poster_id && ! wp_attachment_is_image( $poster_id ) ) {
 			$poster_id = 0;
 		}
+		$ticket_image_id = isset( $_POST['fhb_ticket_image_id'] ) ? absint( $_POST['fhb_ticket_image_id'] ) : 0;
+		if ( $ticket_image_id && ! wp_attachment_is_image( $ticket_image_id ) ) {
+			$ticket_image_id = 0;
+		}
 
 		if ( '' !== $date ) {
 			$date_ok = date_create_immutable( $date );
@@ -256,11 +290,13 @@ final class EventPostType {
 		}
 
 		update_post_meta( $post_id, '_fhb_capacity', $capacity );
+		update_post_meta( $post_id, '_fhb_show_remaining', empty( $_POST['fhb_show_remaining'] ) ? '0' : '1' );
 		update_post_meta( $post_id, '_fhb_date', $date );
 		update_post_meta( $post_id, '_fhb_time', $time );
 		update_post_meta( $post_id, '_fhb_price_ore', $price_ore );
 		update_post_meta( $post_id, '_fhb_invoice', $invoice );
 		update_post_meta( $post_id, '_fhb_poster_id', $poster_id );
+		update_post_meta( $post_id, '_fhb_ticket_image_id', $ticket_image_id );
 		if ( $poster_id ) {
 			set_post_thumbnail( $post_id, $poster_id );
 		} else {

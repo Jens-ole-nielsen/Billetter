@@ -20,6 +20,7 @@ use Forsamlingshus\Billetter\Pdf\HtmlTicketPdf;
 use Forsamlingshus\Billetter\Pdf\TicketPdf;
 use Forsamlingshus\Billetter\Settings;
 use Forsamlingshus\Billetter\TicketContext;
+use Forsamlingshus\Billetter\TicketFrame;
 use Forsamlingshus\Billetter\TicketRepository;
 use Forsamlingshus\Billetter\TicketShortcodes;
 
@@ -168,6 +169,8 @@ final class TicketMailer {
 			'show_buyer' => ! empty( $design['show_buyer'] ),
 			'show_price' => ! empty( $design['show_price'] ),
 			'show_qr' => ! empty( $design['show_qr'] ),
+			'poster_id' => $event ? (int) $event['poster_id'] : 0,
+			'ticket_image_id' => $event ? (int) ( $event['ticket_image_id'] ?? 0 ) : 0,
 		);
 	}
 
@@ -200,7 +203,8 @@ final class TicketMailer {
 			}
 		}
 
-		$binary = ( new TicketPdf() )->render_order( $tickets, $context, $this->logo() );
+		$image_id = TicketFrame::image_id( (int) ( $context['ticket_image_id'] ?? 0 ), (int) ( $context['poster_id'] ?? 0 ) );
+		$binary = ( new TicketPdf() )->render_order( $tickets, $context, $this->logo(), Images::jpeg_cover( $image_id ) );
 
 		return str_starts_with( $binary, '%PDF' ) ? $binary : null;
 	}

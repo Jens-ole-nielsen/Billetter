@@ -26,6 +26,9 @@ require dirname( __DIR__ ) . '/includes/Color.php';
 require dirname( __DIR__ ) . '/includes/QrCode.php';
 require dirname( __DIR__ ) . '/includes/Pdf/Document.php';
 require dirname( __DIR__ ) . '/includes/Pdf/TicketPdf.php';
+require dirname( __DIR__ ) . '/includes/TicketFrame.php';
+require dirname( __DIR__ ) . '/includes/CouponRules.php';
+require dirname( __DIR__ ) . '/includes/Events.php';
 require dirname( __DIR__ ) . '/includes/Pdf/OrdersPdf.php';
 
 use chillerlan\QRCode\Common\EccLevel;
@@ -46,6 +49,9 @@ use Forsamlingshus\Billetter\Pdf\OrdersPdf;
 use Forsamlingshus\Billetter\Pdf\TicketPdf;
 use Forsamlingshus\Billetter\QrCode;
 use Forsamlingshus\Billetter\StripeSignature;
+use Forsamlingshus\Billetter\CouponRules;
+use Forsamlingshus\Billetter\Events;
+use Forsamlingshus\Billetter\TicketFrame;
 use Forsamlingshus\Billetter\Token;
 
 $failed = 0;
@@ -246,6 +252,49 @@ $ticket_pdf = ( new TicketPdf() )->render_order(
 		'show_qr' => true,
 	)
 );
+check( 1240 === TicketFrame::width_px(), 'ticket image width is 1240 pixels' );
+check( 1754 === TicketFrame::height_px(), 'ticket image height is 1754 pixels' );
+check( TicketFrame::height_px() > TicketFrame::width_px(), 'ticket image is portrait' );
+check( '1240 × 1754 pixels, stående' === TicketFrame::fit_label(), 'design screen states size and orientation' );
+check( 8 === TicketFrame::image_id( 8, 3 ), 'a chosen ticket image wins over the poster' );
+check( 3 === TicketFrame::image_id( 0, 3 ), 'without a ticket image the poster is used' );
+check( 0 === TicketFrame::image_id( 0, 0 ), 'without either image the ticket stays plain' );
+$wide = TicketFrame::cover_crop( 2000, 1000, 1240, 1754 );
+check( 1000 === $wide['h'] && $wide['w'] < 2000 && $wide['x'] > 0, 'a wide photo is cropped on the sides to fill the ticket' );
+$tall = TicketFrame::cover_crop( 1000, 3000, 1240, 1754 );
+check( 1000 === $tall['w'] && $tall['h'] < 3000 && $tall['y'] > 0, 'a tall photo is cropped top and bottom' );
+
+$photo_pdf = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	array(
+		'heading' => 'Adgangsbillet',
+		'event' => 'Fest',
+		'date' => 'lørdag 14. juni 2026',
+		'time' => '19:00',
+		'buyer' => 'Jens Hansen',
+		'price' => '150,00 kr.',
+		'order_number' => 'FHB-00012',
+		'primary' => '#1F4B3A',
+		'text' => '#1C1C1C',
+		'background' => '#FFFBF5',
+		'show_event' => true,
+		'show_qr' => true,
+	),
+	null,
+	array(
+		'data' => $jpeg,
+		'w' => 2,
+		'h' => 2,
+	)
+);
+check( str_contains( $photo_pdf, '/DCTDecode' ), 'event image is embedded on the ticket' );
+check( str_contains( $photo_pdf, $jpeg ), 'ticket stores the cropped jpeg' );
+
 check( str_starts_with( $ticket_pdf, '%PDF-1.4' ), 'ticket PDF header' );
 check( 2 === substr_count( $ticket_pdf, '/Type /Page ' ), 'one PDF page per ticket' );
 check( str_contains( $ticket_pdf, 'Billet 1 af 2' ) || str_contains( $ticket_pdf, 'Billet 1 af 2' ), 'ticket label stored' );
@@ -303,6 +352,28 @@ check( false === Updates::should_refresh( false, time() - 30, time(), 'load-plug
 check( false === Updates::should_refresh( false, time() - 10000, time(), 'admin_init' ), 'ordinary admin pages keep the hourly cache' );
 check( true === Updates::should_refresh( true, time(), time(), 'admin_init' ), 'a due check still runs' );
 check( 1 === Updates::CHECK_PERIOD_HOURS, 'update checks are hourly, not every twelve hours' );
+
+check( 'SOMMER20' === CouponRules::normalize( ' sommer20 ' ), 'coupon codes are trimmed and uppercased' );
+check( true === CouponRules::valid_code( 'SOMMER20' ), 'a normal coupon code is accepted' );
+check( false === CouponRules::valid_code( 'A' ), 'a one-character code is rejected' );
+$percent = CouponRules::price( 12500, 2, CouponRules::PERCENT, 10, 0 );
+check( 2500 === $percent['discount_ore'] && 22500 === $percent['payable_ore'], 'ten percent comes off the order' );
+$one_free = CouponRules::price( 12500, 3, CouponRules::TICKETS, 0, 1 );
+check( 12500 === $one_free['discount_ore'] && 25000 === $one_free['payable_ore'], 'the first ticket is free and the rest stay full price' );
+$all_covered = CouponRules::price( 12500, 2, CouponRules::TICKETS, 0, 5 );
+check( 0 === $all_covered['payable_ore'], 'buying fewer tickets than the free count makes the order free' );
+$all_free = CouponRules::price( 12500, 4, CouponRules::FREE, 0, 0 );
+check( 0 === $all_free['payable_ore'] && 50000 === $all_free['discount_ore'], 'all tickets free zeros the order' );
+check( false === CouponRules::accept( false, true, '', '2026-10-25', 0, 4, 0, 0 )['ok'], 'an unknown code is rejected' );
+check( 'expired' === CouponRules::accept( true, true, '2026-10-01', '2026-10-25', 0, 4, 0, 0 )['error'], 'an expired code is rejected' );
+check( 'used_up' === CouponRules::accept( true, true, '', '2026-10-25', 0, 4, 1, 1 )['error'], 'a used-up code is rejected' );
+check( 'wrong_event' === CouponRules::accept( true, true, '', '2026-10-25', 9, 4, 0, 0 )['error'], 'a code for another event is rejected' );
+check( true === CouponRules::accept( true, true, '', '2026-10-25', 0, 4, 0, 3 )['ok'], 'an open code is accepted for every event' );
+$rejected = CouponRules::price( 12500, 2, CouponRules::PERCENT, 10, 0 );
+check( 25000 === $rejected['gross_ore'], 'a rejected code does not change the gross price the buyer started from' );
+check( true === Events::shows_remaining_count( '' ), 'existing events keep the public ticket count' );
+check( true === Events::shows_remaining_count( '1' ), 'an enabled count stays visible' );
+check( false === Events::shows_remaining_count( '0' ), 'the public count can be hidden' );
 
 $saturday = new DateTimeImmutable( '2026-11-14 12:00:00' );
 check( 'lørdag 14. november 2026' === Format::long_date( $saturday ), 'event date is Danish' );

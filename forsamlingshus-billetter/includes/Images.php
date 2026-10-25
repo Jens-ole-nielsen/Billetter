@@ -70,4 +70,72 @@ final class Images {
 			'h' => $new_h,
 		);
 	}
+
+	/**
+	 * JPEG cropped and scaled so it fills the ticket page.
+	 *
+	 * @return array{data:string,w:int,h:int}|null
+	 */
+	public static function jpeg_cover( int $attachment_id ): ?array {
+		if ( $attachment_id < 1 || ! function_exists( 'imagecreatefromstring' ) ) {
+			return null;
+		}
+		$path = get_attached_file( $attachment_id );
+		if ( ! is_string( $path ) || ! is_file( $path ) ) {
+			return null;
+		}
+		$raw = file_get_contents( $path );
+		if ( ! is_string( $raw ) || '' === $raw ) {
+			return null;
+		}
+		$image = @imagecreatefromstring( $raw );
+		if ( ! $image ) {
+			return null;
+		}
+
+		$width = imagesx( $image );
+		$height = imagesy( $image );
+		if ( $width < 1 || $height < 1 ) {
+			imagedestroy( $image );
+			return null;
+		}
+
+		$dst_w = TicketFrame::width_px();
+		$dst_h = TicketFrame::height_px();
+		$crop = TicketFrame::cover_crop( $width, $height, $dst_w, $dst_h );
+		$flat = imagecreatetruecolor( $dst_w, $dst_h );
+		if ( ! $flat ) {
+			imagedestroy( $image );
+			return null;
+		}
+		$white = imagecolorallocate( $flat, 255, 255, 255 );
+		imagefill( $flat, 0, 0, $white );
+		imagecopyresampled(
+			$flat,
+			$image,
+			0,
+			0,
+			$crop['x'],
+			$crop['y'],
+			$dst_w,
+			$dst_h,
+			$crop['w'],
+			$crop['h']
+		);
+
+		ob_start();
+		imagejpeg( $flat, null, 82 );
+		$jpeg = ob_get_clean();
+		imagedestroy( $image );
+		imagedestroy( $flat );
+		if ( ! is_string( $jpeg ) || '' === $jpeg ) {
+			return null;
+		}
+
+		return array(
+			'data' => $jpeg,
+			'w' => $dst_w,
+			'h' => $dst_h,
+		);
+	}
 }
