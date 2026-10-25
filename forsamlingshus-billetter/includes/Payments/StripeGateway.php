@@ -21,6 +21,12 @@ final class StripeGateway implements PaymentMethod {
 
 	public const MIN_ORE = 250;
 
+	/**
+	 * Stripe rejects expires_at when it is not strictly at least 30 minutes ahead.
+	 * 35 minutes leaves room for clock skew.
+	 */
+	public const SESSION_SECONDS = 2100;
+
 	public function __construct(
 		private Settings $settings,
 		private OrderRepository $orders
@@ -52,21 +58,16 @@ final class StripeGateway implements PaymentMethod {
 
 		$session = $client->post(
 			'checkout/sessions',
-			array(
-				'mode' => 'payment',
-				'success_url' => $this->return_url( $event, 'success', (string) $order['public_token'] ),
-				'cancel_url' => $this->return_url( $event, 'cancel', (string) $order['public_token'] ),
-				'customer_email' => (string) $order['buyer_email'],
-				'client_reference_id' => (string) $order['id'],
-				'locale' => 'da',
-				'automatic_payment_methods[enabled]' => 'true',
-				'expires_at' => (string) ( time() + ( 30 * MINUTE_IN_SECONDS ) ),
-				'metadata[order_id]' => (string) $order['id'],
-				'metadata[event_id]' => (string) $event['id'],
-				'line_items[0][quantity]' => (string) $order['quantity'],
-				'line_items[0][price_data][currency]' => 'dkk',
-				'line_items[0][price_data][unit_amount]' => (string) $event['price_ore'],
-				'line_items[0][price_data][product_data][name]' => $name,
+			self::session_fields(
+				(int) $order['id'],
+				(string) $order['buyer_email'],
+				(int) $order['quantity'],
+				(int) $event['price_ore'],
+				$name,
+				(int) $event['id'],
+				$this->return_url( $event, 'success', (string) $order['public_token'] ),
+				$this->return_url( $event, 'cancel', (string) $order['public_token'] ),
+				time() + self::SESSION_SECONDS
 			),
 			'fhb-order-' . (int) $order['id']
 		);
@@ -81,6 +82,44 @@ final class StripeGateway implements PaymentMethod {
 		}
 
 		return array( 'redirect' => $url );
+	}
+
+	/**
+	 * Fields for POST /v1/checkout/sessions.
+	 *
+	 * payment_method_types is omitted on purpose. Checkout then uses the methods
+	 * turned on in the Stripe Dashboard (card, MobilePay, and the rest).
+	 * automatic_payment_methods belongs to PaymentIntents and is rejected here.
+	 * unit_amount is øre, which is the smallest unit for dkk.
+	 *
+	 * @return array<string, string>
+	 */
+	public static function session_fields(
+		int $order_id,
+		string $email,
+		int $quantity,
+		int $unit_ore,
+		string $product_name,
+		int $event_id,
+		string $success_url,
+		string $cancel_url,
+		int $expires_at
+	): array {
+		return array(
+			'mode' => 'payment',
+			'success_url' => $success_url,
+			'cancel_url' => $cancel_url,
+			'customer_email' => $email,
+			'client_reference_id' => (string) $order_id,
+			'locale' => 'da',
+			'expires_at' => (string) $expires_at,
+			'metadata[order_id]' => (string) $order_id,
+			'metadata[event_id]' => (string) $event_id,
+			'line_items[0][quantity]' => (string) $quantity,
+			'line_items[0][price_data][currency]' => 'dkk',
+			'line_items[0][price_data][unit_amount]' => (string) $unit_ore,
+			'line_items[0][price_data][product_data][name]' => $product_name,
+		);
 	}
 
 	/**

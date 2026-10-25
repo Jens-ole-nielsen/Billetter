@@ -25,6 +25,10 @@ $errors = array(
 	'method' => __( 'Den valgte betalingsmåde er ikke tilgængelig.', 'forsamlingshus-billetter' ),
 	'closed' => __( 'Salget er lukket.', 'forsamlingshus-billetter' ),
 	'stripe_min' => __( 'Beløbet er under 2,50 kr., som er Stripes minimum. Vælg faktura, eller køb flere billetter.', 'forsamlingshus-billetter' ),
+	'payment_min' => __( 'Beløbet er under 2,50 kr., som er Stripes minimum. Ordren er ikke oprettet.', 'forsamlingshus-billetter' ),
+	'payment_key_missing' => __( 'Stripe-nøglen mangler. Betalingen kan ikke startes, før den er gemt under Billetter → Indstillinger.', 'forsamlingshus-billetter' ),
+	'payment_key' => __( 'Stripe afviste nøglen. Tjek den hemmelige nøgle under Billetter → Indstillinger.', 'forsamlingshus-billetter' ),
+	'payment_url' => __( 'Stripe afviste adressen på salgssiden. Betalingen er ikke startet.', 'forsamlingshus-billetter' ),
 	'config' => __( 'Online betaling er ikke sat op endnu.', 'forsamlingshus-billetter' ),
 );
 

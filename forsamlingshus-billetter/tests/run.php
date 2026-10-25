@@ -15,7 +15,11 @@ require dirname( __DIR__ ) . '/includes/Token.php';
 require dirname( __DIR__ ) . '/includes/Money.php';
 require dirname( __DIR__ ) . '/includes/OrderStatus.php';
 require dirname( __DIR__ ) . '/includes/RefundRules.php';
+require dirname( __DIR__ ) . '/includes/Payments/PaymentMethod.php';
 require dirname( __DIR__ ) . '/includes/Payments/PaymentMethods.php';
+require dirname( __DIR__ ) . '/includes/Payments/StripeFailure.php';
+require dirname( __DIR__ ) . '/includes/Payments/StripeGateway.php';
+require dirname( __DIR__ ) . '/includes/Updates.php';
 require dirname( __DIR__ ) . '/includes/Format.php';
 require dirname( __DIR__ ) . '/includes/StripeSignature.php';
 require dirname( __DIR__ ) . '/includes/Color.php';
@@ -33,6 +37,9 @@ use Forsamlingshus\Billetter\Format;
 use Forsamlingshus\Billetter\Color;
 use Forsamlingshus\Billetter\Money;
 use Forsamlingshus\Billetter\Payments\PaymentMethods;
+use Forsamlingshus\Billetter\Payments\StripeFailure;
+use Forsamlingshus\Billetter\Payments\StripeGateway;
+use Forsamlingshus\Billetter\Updates;
 use Forsamlingshus\Billetter\RefundRules;
 use Forsamlingshus\Billetter\Pdf\Document;
 use Forsamlingshus\Billetter\Pdf\OrdersPdf;
@@ -260,6 +267,42 @@ $orders_pdf = ( new OrdersPdf() )->render(
 check( str_contains( $orders_pdf, 'K\\370ber' ) || str_contains( $orders_pdf, 'Køber' ), 'orders PDF has the buyer column' );
 check( str_contains( $orders_pdf, 'Billetter i alt: 4' ), 'orders PDF totals the tickets' );
 check( str_contains( $orders_pdf, 'Vil gerne sidde ved scenen' ), 'orders PDF includes the remark' );
+
+$fields = StripeGateway::session_fields(
+	12,
+	'kober@example.test',
+	2,
+	12500,
+	'Lørdagsfest',
+	13,
+	'https://example.test/billetter/?fhb_result=success&order=abc',
+	'https://example.test/billetter/?fhb_result=cancel&order=abc',
+	1_700_000_000
+);
+check( ! array_key_exists( 'automatic_payment_methods[enabled]', $fields ), 'checkout session does not send automatic_payment_methods' );
+check( 'dkk' === $fields['line_items[0][price_data][currency]'], 'checkout currency is dkk' );
+check( '12500' === $fields['line_items[0][price_data][unit_amount]'], 'unit amount is øre' );
+check( '2' === $fields['line_items[0][quantity]'], 'stripe quantity is the ticket count' );
+check( 'payment' === $fields['mode'], 'checkout mode is payment' );
+check( str_starts_with( $fields['success_url'], 'https://' ), 'success url is absolute' );
+check( str_starts_with( $fields['cancel_url'], 'https://' ), 'cancel url is absolute' );
+check( StripeGateway::SESSION_SECONDS >= 1860, 'session lifetime is more than 30 minutes' );
+
+check( 'payment_key_missing' === StripeFailure::buyer_code( 'Stripe-nøglen mangler.', '', 0 ), 'missing key is named' );
+check( 'payment_key' === StripeFailure::buyer_code( 'Invalid API Key provided: sk_test_secret', 'invalid_api_key', 401 ), 'rejected key is named' );
+check( 'payment_min' === StripeFailure::buyer_code( 'Amount must be at least 250 øre', 'amount_too_small', 400 ), 'amount under 2.50 kr is named' );
+check( 'payment' === StripeFailure::buyer_code( 'Received unknown parameter', 'parameter_unknown', 400 ), 'other stripe errors stay generic' );
+check( 'fhb stripe checkout code=amount_too_small http=400' === StripeFailure::log_line( 'amount_too_small', 400 ), 'log line is the code and status' );
+check( ! str_contains( StripeFailure::log_line( 'invalid_api_key', 401 ), 'sk_' ), 'log line has no secret' );
+check( str_starts_with( StripeFailure::admin_note( 'amount_too_small', 'Amount must be at least 250' ), 'amount_too_small:' ), 'admin note keeps the stripe code' );
+
+check( '' === Updates::token_for_auth( '   ' ), 'blank github token is not sent' );
+check( 'ghp_example' === Updates::token_for_auth( ' ghp_example ' ), 'a real token is trimmed' );
+check( true === Updates::should_refresh( false, time() - 121, time(), 'load-plugins.php' ), 'plugins screen refreshes after two minutes' );
+check( false === Updates::should_refresh( false, time() - 30, time(), 'load-plugins.php' ), 'plugins screen does not refresh immediately' );
+check( false === Updates::should_refresh( false, time() - 10000, time(), 'admin_init' ), 'ordinary admin pages keep the hourly cache' );
+check( true === Updates::should_refresh( true, time(), time(), 'admin_init' ), 'a due check still runs' );
+check( 1 === Updates::CHECK_PERIOD_HOURS, 'update checks are hourly, not every twelve hours' );
 
 $saturday = new DateTimeImmutable( '2026-11-14 12:00:00' );
 check( 'lørdag 14. november 2026' === Format::long_date( $saturday ), 'event date is Danish' );

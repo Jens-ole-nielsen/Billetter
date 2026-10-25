@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.3.0
+Stable tag: 1.3.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,11 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.3.1 =
+* Betaling starter i Stripe Checkout. Sessionen bruger ikke længere et parameter, Stripe afviser.
+* Mangler Stripe-nøglen, eller afviser Stripe kaldet, vises en kort dansk forklaring i stedet for den generelle fejl.
+* Opdateringer læses fra den offentlige GitHub-udgivelse uden token. Plugins-siden spørger igen efter to minutter, så en ny version ikke bliver skjult i timevis.
 
 = 1.3.0 =
 * Stripe er valgt på forhånd. Faktura vises kun, når den er slået til på arrangementet, og køberen skal bekræfte, at den er aftalt.

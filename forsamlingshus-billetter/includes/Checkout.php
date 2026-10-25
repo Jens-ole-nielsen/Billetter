@@ -12,6 +12,7 @@ namespace Forsamlingshus\Billetter;
 use Forsamlingshus\Billetter\Mail\TicketMailer;
 use Forsamlingshus\Billetter\Payments\PaymentMethods;
 use Forsamlingshus\Billetter\Payments\StripeException;
+use Forsamlingshus\Billetter\Payments\StripeFailure;
 use Forsamlingshus\Billetter\Payments\StripeGateway;
 
 defined( 'ABSPATH' ) || exit;
@@ -91,8 +92,11 @@ final class Checkout {
 			}
 		} elseif ( 'stripe' === $method_id ) {
 			$method = $this->methods->get( 'stripe' );
-			if ( ! $method || ! $method->is_available( $event ) ) {
+			if ( ! $method ) {
 				$this->fail( $event_id, 'config' );
+			}
+			if ( ! $method->is_available( $event ) ) {
+				$this->fail( $event_id, 'payment_key_missing' );
 			}
 			if ( $total < StripeGateway::MIN_ORE ) {
 				$this->fail( $event_id, 'stripe_min' );
@@ -104,7 +108,7 @@ final class Checkout {
 		$status = 'invoice' === $method_id ? OrderStatus::AWAITING : OrderStatus::PENDING;
 		$expires = null;
 		if ( 'stripe' === $method_id ) {
-			$expires = wp_date( 'Y-m-d H:i:s', time() + ( 30 * MINUTE_IN_SECONDS ) );
+			$expires = wp_date( 'Y-m-d H:i:s', time() + StripeGateway::SESSION_SECONDS );
 		}
 
 		global $wpdb;
@@ -168,9 +172,11 @@ final class Checkout {
 			wp_redirect( $result['redirect'] );
 			exit;
 		} catch ( StripeException $exception ) {
-			$this->orders->set_failure( $order_id, $exception->getMessage() );
+			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Stripe code only, never the secret.
+			error_log( StripeFailure::log_line( $exception->stripe_code, $exception->getCode() ) );
+			$this->orders->set_failure( $order_id, StripeFailure::admin_note( $exception->stripe_code, $exception->getMessage() ) );
 			$this->fulfillment->cancel_unpaid( $order_id, true );
-			$this->fail( $event_id, 'payment' );
+			$this->fail( $event_id, StripeFailure::buyer_code( $exception->getMessage(), $exception->stripe_code, $exception->getCode() ) );
 		}
 	}
 
