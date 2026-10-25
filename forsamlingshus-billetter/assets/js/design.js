@@ -22,6 +22,22 @@
 		});
 	}
 
+	function padsOn() {
+		var choice = document.getElementById("fhb-pad-blocks");
+		var value = choice ? choice.value : "auto";
+		if (value === "0") {
+			return false;
+		}
+		if (value === "1") {
+			return true;
+		}
+		return preview.classList.contains("has-photo");
+	}
+
+	function syncPads() {
+		preview.classList.toggle("has-pad", padsOn());
+	}
+
 	function syncSize() {
 		var size = document.getElementById("fhb-ticket-size");
 		if (!size) {
@@ -42,9 +58,13 @@
 		}
 	}
 
-	document.addEventListener("input", sync);
+	document.addEventListener("input", function () {
+		sync();
+		syncPads();
+	});
 	document.addEventListener("change", function (event) {
 		sync();
+		syncPads();
 		if (event.target && event.target.id === "fhb-ticket-size") {
 			syncSize();
 		}
@@ -75,6 +95,7 @@
 				preview.style.backgroundImage = "none";
 				preview.classList.remove("has-photo");
 			}
+			syncPads();
 		}
 	});
 
@@ -128,5 +149,6 @@
 	});
 
 	sync();
+	syncPads();
 	syncSize();
 })();

@@ -36,6 +36,7 @@ final class Design {
 			'show_buyer' => 1,
 			'show_price' => 1,
 			'show_qr' => 1,
+			'pad_blocks' => 'auto',
 			'elementor_template_id' => 0,
 		);
 		foreach ( TicketFrame::default_blocks() as $name => $pos ) {
@@ -77,6 +78,7 @@ final class Design {
 		foreach ( array( 'show_event', 'show_date', 'show_time', 'show_buyer', 'show_price', 'show_qr' ) as $flag ) {
 			$design[ $flag ] = empty( $design[ $flag ] ) ? 0 : 1;
 		}
+		$design['pad_blocks'] = TicketFrame::pad_choice( $design['pad_blocks'] ?? 'auto' );
 		$design['elementor_template_id'] = self::template_id( $design['elementor_template_id'] ?? 0 );
 
 		return $design;
@@ -111,6 +113,7 @@ final class Design {
 		foreach ( array( 'show_event', 'show_date', 'show_time', 'show_buyer', 'show_price', 'show_qr' ) as $flag ) {
 			$design[ $flag ] = empty( $input[ $flag ] ) ? 0 : 1;
 		}
+		$design['pad_blocks'] = TicketFrame::pad_choice( $input['pad_blocks'] ?? 'auto' );
 		if ( array_key_exists( 'elementor_template_id', $input ) ) {
 			$design['elementor_template_id'] = self::template_id( $input['elementor_template_id'] );
 		} else {

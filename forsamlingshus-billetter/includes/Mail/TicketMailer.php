@@ -169,6 +169,7 @@ final class TicketMailer {
 			'show_buyer' => ! empty( $design['show_buyer'] ),
 			'show_price' => ! empty( $design['show_price'] ),
 			'show_qr' => ! empty( $design['show_qr'] ),
+			'pad_blocks' => (string) ( $design['pad_blocks'] ?? 'auto' ),
 			'poster_id' => $event ? (int) $event['poster_id'] : 0,
 			'ticket_image_id' => $event ? (int) ( $event['ticket_image_id'] ?? 0 ) : 0,
 			'background_id' => (int) $design['background_id'],

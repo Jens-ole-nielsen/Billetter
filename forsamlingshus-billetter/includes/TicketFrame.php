@@ -215,4 +215,57 @@ final class TicketFrame {
 	public static function origin( float $page, int $mille ): float {
 		return $page * self::mille( $mille ) / 1000;
 	}
+
+	/**
+	 * auto follows the photo. 1 is always. 0 is never. Anything else is auto,
+	 * which is what tickets saved before the choice was added still do.
+	 */
+	public static function pad_choice( mixed $value ): string {
+		$choice = is_scalar( $value ) ? (string) $value : 'auto';
+
+		return in_array( $choice, array( 'auto', '1', '0' ), true ) ? $choice : 'auto';
+	}
+
+	public static function pads_content( mixed $choice, bool $photo ): bool {
+		$choice = self::pad_choice( $choice );
+		if ( '1' === $choice ) {
+			return true;
+		}
+		if ( '0' === $choice ) {
+			return false;
+		}
+
+		return $photo;
+	}
+
+	/**
+	 * The saved top-left stays. The box shrinks into the room that is left
+	 * on the page, and moves only to keep a minimum box on the page.
+	 *
+	 * @return array{x:float,y:float,w:float,h:float}
+	 */
+	public static function place( float $x, float $y, float $w, float $h, float $page_w, float $page_h ): array {
+		$margin = 8.0;
+		$min_w = 36.0;
+		$min_h = 16.0;
+		$x = max( 0.0, $x );
+		$y = max( 0.0, $y );
+		$room_w = $page_w - $margin - $x;
+		$room_h = $page_h - $margin - $y;
+		if ( $room_w < $min_w ) {
+			$x = max( $margin, $page_w - $margin - $min_w );
+			$room_w = $page_w - $margin - $x;
+		}
+		if ( $room_h < $min_h ) {
+			$y = max( $margin, $page_h - $margin - $min_h );
+			$room_h = $page_h - $margin - $y;
+		}
+
+		return array(
+			'x' => $x,
+			'y' => $y,
+			'w' => min( max( $min_w, $w ), max( $min_w, $room_w ) ),
+			'h' => min( max( $min_h, $h ), max( $min_h, $room_h ) ),
+		);
+	}
 }

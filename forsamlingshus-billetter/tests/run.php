@@ -363,6 +363,57 @@ $first_text_x = static function ( string $pdf ): float {
 	return (float) $match[1];
 };
 check( $first_text_x( $right_pdf ) > $first_text_x( $left_pdf ) + 40, 'a saved heading position moves the text on the PDF' );
+$placed['blocks'] = array( 'heading' => array( 'x' => 900, 'y' => 40 ) );
+$edge_pdf = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	$placed
+);
+check( $first_text_x( $edge_pdf ) > 450, 'a heading dropped on the right is not pulled back into a column' );
+$pad_off = $placed;
+$pad_off['pad_blocks'] = '0';
+$pad_off['blocks'] = array( 'heading' => array( 'x' => 40, 'y' => 40 ) );
+$plain_pad = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	$pad_off,
+	null,
+	array(
+		'data' => $jpeg,
+		'w' => 2,
+		'h' => 2,
+	)
+);
+$pad_on = $pad_off;
+$pad_on['pad_blocks'] = 'auto';
+$photo_pad = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	$pad_on,
+	null,
+	array(
+		'data' => $jpeg,
+		'w' => 2,
+		'h' => 2,
+	)
+);
+$white = static function ( string $pdf ): int {
+	return substr_count( $pdf, '1.000 1.000 1.000 rg' );
+};
+check( $white( $photo_pad ) > $white( $plain_pad ), 'a photo keeps the light pad unless it is turned off' );
+check( $white( $plain_pad ) > 0, 'the QR code keeps its white background when the pad is off' );
 check( 2 === substr_count( $ticket_pdf, '/Type /Page ' ), 'one PDF page per ticket' );
 check( str_contains( $ticket_pdf, 'Billet 1 af 2' ) || str_contains( $ticket_pdf, 'Billet 1 af 2' ), 'ticket label stored' );
 $grouped_parts = explode( ' ', Token::grouped( $tokens[0] ) );
@@ -421,7 +472,26 @@ check( true === Updates::should_refresh( false, time() - 121, time(), 'load-plug
 check( false === Updates::should_refresh( false, time() - 30, time(), 'load-plugins.php' ), 'plugins screen does not refresh immediately' );
 check( false === Updates::should_refresh( false, time() - 10000, time(), 'admin_init' ), 'ordinary admin pages keep the hourly cache' );
 check( true === Updates::should_refresh( true, time(), time(), 'admin_init' ), 'a due check still runs' );
+check( false === Updates::should_refresh( true, time() - 10000, time(), 'admin_init', true ), 'the update click keeps the release already on screen' );
+$stored_offer = (object) array(
+	'update' => (object) array(
+		'version' => '1.6.0',
+		'download_url' => 'https://github.com/Jens-ole-nielsen/Billetter/releases/download/v1.6.0/forsamlingshus-billetter.zip',
+	),
+);
+$parsed_offer = Updates::offer_from_state( $stored_offer );
+check( is_array( $parsed_offer ) && '1.6.0' === $parsed_offer['version'], 'a cached release keeps its version' );
+check( is_array( $parsed_offer ) && str_ends_with( $parsed_offer['package'], 'forsamlingshus-billetter.zip' ), 'a cached release keeps the zip' );
+check( null === Updates::offer_from_state( (object) array() ), 'a failed check has no release' );
+check( true === Updates::offer_is_newer( '1.6.0', '1.5.0' ), '1.6.0 is newer than the installed plugin' );
+check( false === Updates::offer_is_newer( '1.5.0', '1.5.0' ), 'the same version is not offered again' );
 check( 1 === Updates::CHECK_PERIOD_HOURS, 'update checks are hourly, not every twelve hours' );
+check( true === TicketFrame::pads_content( 'auto', true ) && false === TicketFrame::pads_content( 'auto', false ), 'the light pad follows the photo unless chosen' );
+check( false === TicketFrame::pads_content( '0', true ) && true === TicketFrame::pads_content( '1', false ), 'the light pad can be forced off or on' );
+check( 'auto' === TicketFrame::pad_choice( 'maybe' ), 'an unknown pad choice stays automatic' );
+$right_edge = TicketFrame::place( 535.0, 40.0, 280.0, 28.0, 595.28, 841.89 );
+check( $right_edge['x'] > 480, 'a block dropped on the right stays on the right' );
+check( $right_edge['w'] < 120, 'a block dropped on the right shrinks instead of jumping left' );
 
 check( 'SOMMER20' === CouponRules::normalize( ' sommer20 ' ), 'coupon codes are trimmed and uppercased' );
 check( true === CouponRules::valid_code( 'SOMMER20' ), 'a normal coupon code is accepted' );

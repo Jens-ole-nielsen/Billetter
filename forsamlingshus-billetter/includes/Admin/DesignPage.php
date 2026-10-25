@@ -61,12 +61,14 @@ final class DesignPage {
 		$design = $this->design->get();
 		$logo = (int) $design['logo_id'] ? wp_get_attachment_image_url( (int) $design['logo_id'], 'medium' ) : '';
 		$background = (int) $design['background_id'] ? wp_get_attachment_image_url( (int) $design['background_id'], 'large' ) : '';
+		$has_photo = is_string( $background ) && '' !== $background;
+		$pads = TicketFrame::pads_content( $design['pad_blocks'] ?? 'auto', $has_photo );
 		$size = TicketFrame::size( (string) $design['ticket_size'] );
 		?>
 		<div class="wrap fhb-design-wrap">
 			<h1><?php esc_html_e( 'Billetdesign', 'forsamlingshus-billetter' ); ?></h1>
 			<p><?php esc_html_e( 'Vælg baggrund, størrelse, logo og hvilke felter der skal med. Træk felterne på eksemplet. Gem design, så PDF-billetten bruger de samme placeringer.', 'forsamlingshus-billetter' ); ?></p>
-			<p class="description"><?php esc_html_e( 'Har arrangementet en plakat eller sit eget billetbillede, bruges det i stedet for baggrunden her. Størrelse og placering følger stadig dette design. Uden billede er billetten ensfarvet. Teksten står på en lys flade, og QR-koden står på en hvid flade, så den kan scannes.', 'forsamlingshus-billetter' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Har arrangementet en plakat eller sit eget billetbillede, bruges det i stedet for baggrunden her. Størrelse og placering følger stadig dette design. Uden billede er billetten ensfarvet. QR-koden står altid på en hvid flade, så den kan scannes.', 'forsamlingshus-billetter' ); ?></p>
 			<div class="fhb-design-layout">
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<?php wp_nonce_field( 'fhb_save_design' ); ?>
@@ -114,6 +116,17 @@ final class DesignPage {
 								<button type="button" class="button fhb-media-pick" data-target="fhb-background-id" data-preview="fhb-background-preview"><?php esc_html_e( 'Vælg billede', 'forsamlingshus-billetter' ); ?></button>
 								<button type="button" class="button fhb-media-clear" data-target="fhb-background-id" data-preview="fhb-background-preview"><?php esc_html_e( 'Fjern', 'forsamlingshus-billetter' ); ?></button>
 								<p class="description"><?php esc_html_e( 'Bruges når arrangementet ikke har en plakat eller et eget billetbillede. Billedet skaleres og beskæres, så det fylder billetten.', 'forsamlingshus-billetter' ); ?></p>
+							</td>
+						</tr>
+						<tr>
+							<th scope="row"><label for="fhb-pad-blocks"><?php esc_html_e( 'Lys flade bag tekst og logo', 'forsamlingshus-billetter' ); ?></label></th>
+							<td>
+								<select id="fhb-pad-blocks" name="pad_blocks">
+									<option value="auto" <?php selected( (string) $design['pad_blocks'], 'auto' ); ?>><?php esc_html_e( 'Når der er et billede', 'forsamlingshus-billetter' ); ?></option>
+									<option value="1" <?php selected( (string) $design['pad_blocks'], '1' ); ?>><?php esc_html_e( 'Altid', 'forsamlingshus-billetter' ); ?></option>
+									<option value="0" <?php selected( (string) $design['pad_blocks'], '0' ); ?>><?php esc_html_e( 'Nej', 'forsamlingshus-billetter' ); ?></option>
+								</select>
+								<p class="description"><?php esc_html_e( 'Tekst og logo kan stå på en hvid flade, så de kan læses oven på et billede. Som standard er fladen slået til, når billetten har et billede. QR-koden har altid hvid baggrund, og det kan ikke slås fra.', 'forsamlingshus-billetter' ); ?></p>
 							</td>
 						</tr>
 						<tr>
@@ -170,7 +183,7 @@ final class DesignPage {
 				<div>
 					<h2><?php esc_html_e( 'Eksempel', 'forsamlingshus-billetter' ); ?></h2>
 					<p class="description"><?php esc_html_e( 'Træk et felt, logoet eller QR-koden. Slip, og gem design.', 'forsamlingshus-billetter' ); ?></p>
-					<article id="fhb-ticket-preview" class="fhb-ticket-preview<?php echo is_string( $background ) && '' !== $background ? ' has-photo' : ''; ?>" style="<?php echo esc_attr( $this->preview_style( $design, is_string( $background ) ? $background : '' ) ); ?>">
+					<article id="fhb-ticket-preview" class="fhb-ticket-preview<?php echo $has_photo ? ' has-photo' : ''; ?><?php echo $pads ? ' has-pad' : ''; ?>" style="<?php echo esc_attr( $this->preview_style( $design, is_string( $background ) ? $background : '' ) ); ?>">
 						<?php $this->preview_blocks( $design, is_string( $logo ) ? $logo : '' ); ?>
 					</article>
 				</div>
