@@ -22,8 +22,10 @@ final class Design {
 	 * @return array<string, int|string>
 	 */
 	public static function defaults(): array {
-		return array(
+		$defaults = array(
 			'logo_id' => 0,
+			'background_id' => 0,
+			'ticket_size' => 'a4',
 			'heading' => 'Adgangsbillet',
 			'color_primary' => '#1F4B3A',
 			'color_text' => '#1C1C1C',
@@ -36,6 +38,12 @@ final class Design {
 			'show_qr' => 1,
 			'elementor_template_id' => 0,
 		);
+		foreach ( TicketFrame::default_blocks() as $name => $pos ) {
+			$defaults[ 'block_' . $name . '_x' ] = $pos['x'];
+			$defaults[ 'block_' . $name . '_y' ] = $pos['y'];
+		}
+
+		return $defaults;
 	}
 
 	/**
@@ -48,6 +56,13 @@ final class Design {
 		}
 		$design = array_merge( self::defaults(), $stored );
 		$design['logo_id'] = absint( $design['logo_id'] );
+		$design['background_id'] = absint( $design['background_id'] ?? 0 );
+		$design['ticket_size'] = TicketFrame::size( (string) ( $design['ticket_size'] ?? 'a4' ) )['key'];
+		$blocks = TicketFrame::blocks_from( $design );
+		foreach ( $blocks as $name => $pos ) {
+			$design[ 'block_' . $name . '_x' ] = $pos['x'];
+			$design[ 'block_' . $name . '_y' ] = $pos['y'];
+		}
 		$design['heading'] = sanitize_text_field( (string) $design['heading'] );
 		if ( '' === $design['heading'] ) {
 			$design['heading'] = (string) self::defaults()['heading'];
@@ -75,6 +90,15 @@ final class Design {
 		$design['logo_id'] = absint( $input['logo_id'] ?? 0 );
 		if ( $design['logo_id'] && ! wp_attachment_is_image( $design['logo_id'] ) ) {
 			$design['logo_id'] = 0;
+		}
+		$design['background_id'] = absint( $input['background_id'] ?? 0 );
+		if ( $design['background_id'] && ! wp_attachment_is_image( $design['background_id'] ) ) {
+			$design['background_id'] = 0;
+		}
+		$design['ticket_size'] = TicketFrame::size( sanitize_key( (string) ( $input['ticket_size'] ?? 'a4' ) ) )['key'];
+		foreach ( TicketFrame::default_blocks() as $name => $pos ) {
+			$design[ 'block_' . $name . '_x' ] = TicketFrame::mille( $input[ 'block_' . $name . '_x' ] ?? $pos['x'] );
+			$design[ 'block_' . $name . '_y' ] = TicketFrame::mille( $input[ 'block_' . $name . '_y' ] ?? $pos['y'] );
 		}
 		$heading = sanitize_text_field( (string) ( $input['heading'] ?? '' ) );
 		$design['heading'] = '' !== $heading ? mb_substr( $heading, 0, 80 ) : (string) self::defaults()['heading'];

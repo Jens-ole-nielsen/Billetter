@@ -259,6 +259,17 @@ check( '1240 × 1754 pixels, stående' === TicketFrame::fit_label(), 'design scr
 check( 8 === TicketFrame::image_id( 8, 3 ), 'a chosen ticket image wins over the poster' );
 check( 3 === TicketFrame::image_id( 0, 3 ), 'without a ticket image the poster is used' );
 check( 0 === TicketFrame::image_id( 0, 0 ), 'without either image the ticket stays plain' );
+check( 8 === TicketFrame::image_id( 8, 3, 5 ), 'a chosen ticket image wins over the poster and the design image' );
+check( 3 === TicketFrame::image_id( 0, 3, 5 ), 'an event poster replaces the design image' );
+check( 5 === TicketFrame::image_id( 0, 0, 5 ), 'the design image is used when the event has none' );
+check( 874 === TicketFrame::pixels( 'a5' )['w'] && 1240 === TicketFrame::pixels( 'a5' )['h'], 'A5 portrait pixel size' );
+check( '874 × 1240 pixels, stående' === TicketFrame::fit_label( 'a5' ), 'A5 label states pixels and orientation' );
+check( 620 === TicketFrame::pixels( 'a6' )['w'] && 874 === TicketFrame::pixels( 'a6' )['h'], 'A6 portrait pixel size' );
+check( 1240 === TicketFrame::pixels( 'a5l' )['w'] && 874 === TicketFrame::pixels( 'a5l' )['h'], 'A5 landscape pixel size' );
+check( '1240 × 874 pixels, liggende' === TicketFrame::fit_label( 'a5l' ), 'landscape label' );
+check( 'a4' === TicketFrame::size( 'nope' )['key'], 'unknown size falls back to A4' );
+check( 0 === TicketFrame::mille( -20 ) && 1000 === TicketFrame::mille( 4000 ), 'positions stay inside the page' );
+check( abs( TicketFrame::origin( 595.28, 500 ) - 297.64 ) < 0.02, 'a saved position is a fraction of the page' );
 $wide = TicketFrame::cover_crop( 2000, 1000, 1240, 1754 );
 check( 1000 === $wide['h'] && $wide['w'] < 2000 && $wide['x'] > 0, 'a wide photo is cropped on the sides to fill the ticket' );
 $tall = TicketFrame::cover_crop( 1000, 3000, 1240, 1754 );
@@ -295,10 +306,69 @@ $photo_pdf = ( new TicketPdf() )->render_order(
 check( str_contains( $photo_pdf, '/DCTDecode' ), 'event image is embedded on the ticket' );
 check( str_contains( $photo_pdf, $jpeg ), 'ticket stores the cropped jpeg' );
 
+check( str_contains( $ticket_pdf, '/MediaBox [0 0 595.28 841.89]' ), 'default ticket is still A4' );
 check( str_starts_with( $ticket_pdf, '%PDF-1.4' ), 'ticket PDF header' );
+
+$placed = array(
+	'heading' => 'Adgangsbillet',
+	'event' => 'Fest',
+	'date' => 'lørdag 14. juni 2026',
+	'time' => '19:00',
+	'buyer' => 'Jens Hansen',
+	'price' => '150,00 kr.',
+	'order_number' => 'FHB-00012',
+	'primary' => '#1F4B3A',
+	'text' => '#1C1C1C',
+	'background' => '#FFFBF5',
+	'show_event' => true,
+	'show_qr' => true,
+	'ticket_size' => 'a6',
+);
+$small_pdf = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	$placed
+);
+check( str_contains( $small_pdf, '/MediaBox [0 0 297.64 419.53]' ), 'chosen ticket size changes the PDF page' );
+$placed['ticket_size'] = 'a4';
+$placed['blocks'] = array( 'heading' => array( 'x' => 40, 'y' => 40 ) );
+$left_pdf = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	$placed
+);
+$placed['blocks'] = array( 'heading' => array( 'x' => 620, 'y' => 40 ) );
+$right_pdf = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	$placed
+);
+$first_text_x = static function ( string $pdf ): float {
+	if ( 1 !== preg_match( '/Tf ([\d.]+) ([\d.]+) Td/', $pdf, $match ) ) {
+		return -1;
+	}
+
+	return (float) $match[1];
+};
+check( $first_text_x( $right_pdf ) > $first_text_x( $left_pdf ) + 40, 'a saved heading position moves the text on the PDF' );
 check( 2 === substr_count( $ticket_pdf, '/Type /Page ' ), 'one PDF page per ticket' );
 check( str_contains( $ticket_pdf, 'Billet 1 af 2' ) || str_contains( $ticket_pdf, 'Billet 1 af 2' ), 'ticket label stored' );
-check( str_contains( $ticket_pdf, Token::grouped( $tokens[0] ) ) || str_contains( $ticket_pdf, str_replace( ' ', '', Token::grouped( $tokens[0] ) ) ), 'manual code is on the ticket' );
+$grouped_parts = explode( ' ', Token::grouped( $tokens[0] ) );
+$grouped_first = implode( ' ', array_slice( $grouped_parts, 0, 4 ) );
+$grouped_second = implode( ' ', array_slice( $grouped_parts, 4 ) );
+check( str_contains( $ticket_pdf, $grouped_first ) && str_contains( $ticket_pdf, $grouped_second ), 'manual code is on the ticket' );
 
 $orders_pdf = ( new OrdersPdf() )->render(
 	array(

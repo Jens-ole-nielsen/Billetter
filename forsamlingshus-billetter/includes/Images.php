@@ -76,7 +76,7 @@ final class Images {
 	 *
 	 * @return array{data:string,w:int,h:int}|null
 	 */
-	public static function jpeg_cover( int $attachment_id ): ?array {
+	public static function jpeg_cover( int $attachment_id, ?int $dst_w = null, ?int $dst_h = null ): ?array {
 		if ( $attachment_id < 1 || ! function_exists( 'imagecreatefromstring' ) ) {
 			return null;
 		}
@@ -100,8 +100,12 @@ final class Images {
 			return null;
 		}
 
-		$dst_w = TicketFrame::width_px();
-		$dst_h = TicketFrame::height_px();
+		$dst_w = $dst_w ?? TicketFrame::width_px();
+		$dst_h = $dst_h ?? TicketFrame::height_px();
+		if ( $dst_w < 1 || $dst_h < 1 ) {
+			imagedestroy( $image );
+			return null;
+		}
 		$crop = TicketFrame::cover_crop( $width, $height, $dst_w, $dst_h );
 		$flat = imagecreatetruecolor( $dst_w, $dst_h );
 		if ( ! $flat ) {

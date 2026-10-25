@@ -135,6 +135,17 @@ final class Document {
 	private array $ops = array();
 
 	/**
+	 * Media box of each closed page, in points.
+	 *
+	 * @var list<array{0:float,1:float}>
+	 */
+	private array $page_boxes = array();
+
+	private float $page_width = self::PAGE_WIDTH;
+
+	private float $page_height = self::PAGE_HEIGHT;
+
+	/**
 	 * @var list<int>
 	 */
 	private array $current_images = array();
@@ -146,8 +157,10 @@ final class Document {
 	 */
 	private array $images = array();
 
-	public function add_page(): void {
+	public function add_page( float $width = 0, float $height = 0 ): void {
 		$this->close_page();
+		$this->page_width = $width > 0 ? $width : self::PAGE_WIDTH;
+		$this->page_height = $height > 0 ? $height : self::PAGE_HEIGHT;
 		$this->open = true;
 	}
 
@@ -162,7 +175,7 @@ final class Document {
 	 */
 	public function rect( float $x, float $y, float $w, float $h, string $style = 'F' ): void {
 		$this->ensure_page();
-		$pdf_y = self::PAGE_HEIGHT - $y - $h;
+		$pdf_y = $this->page_height - $y - $h;
 		$op = match ( $style ) {
 			'S' => 'S',
 			'B' => 'B',
@@ -177,7 +190,7 @@ final class Document {
 	public function text( float $x, float $y, float $size, string $text, bool $bold = false ): void {
 		$this->ensure_page();
 		$font = $bold ? 'F2' : 'F1';
-		$pdf_y = self::PAGE_HEIGHT - $y;
+		$pdf_y = $this->page_height - $y;
 		$encoded = $this->escape( $this->winansi( $text ) );
 		$this->ops[] = sprintf( 'BT /%s %.2F Tf %.2F %.2F Td (%s) Tj ET', $font, $size, $x, $pdf_y, $encoded );
 	}
@@ -240,7 +253,7 @@ final class Document {
 			'h' => $px_h,
 		);
 		$this->current_images[] = $index;
-		$pdf_y = self::PAGE_HEIGHT - $y - $h;
+		$pdf_y = $this->page_height - $y - $h;
 		$this->ops[] = sprintf( 'q %.2F 0 0 %.2F %.2F %.2F cm /Im%d Do Q', $w, $h, $x, $pdf_y, $index );
 	}
 
@@ -337,8 +350,9 @@ final class Document {
 				}
 				$xobject = ' /XObject << ' . implode( ' ', $parts ) . ' >>';
 			}
+			$box = $this->page_boxes[ $index ] ?? array( self::PAGE_WIDTH, self::PAGE_HEIGHT );
 			$add(
-				'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' . self::PAGE_WIDTH . ' ' . self::PAGE_HEIGHT . ']'
+				'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ' . sprintf( '%.2F', $box[0] ) . ' ' . sprintf( '%.2F', $box[1] ) . ']'
 				. ' /Resources << /Font << /F1 3 0 R /F2 4 0 R >>' . $xobject . ' >>'
 				. ' /Contents ' . $content_ids[ $index ] . ' 0 R >>'
 			);
@@ -369,6 +383,7 @@ final class Document {
 		}
 		$this->pages[] = $this->ops;
 		$this->page_images[] = $this->current_images;
+		$this->page_boxes[] = array( $this->page_width, $this->page_height );
 		$this->ops = array();
 		$this->current_images = array();
 		$this->open = false;

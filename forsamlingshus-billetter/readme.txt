@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.4.0
+Stable tag: 1.5.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,12 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.5.0 =
+* Under Billetter → Billetdesign kan I vælge baggrundsbillede og billetstørrelse. Skærmen viser, hvor mange pixels billedet skal være.
+* Eksemplet er billetten. Træk tekst, logo og QR-kode, og gem design. PDF-billetten bruger de samme placeringer.
+* Har arrangementet en plakat eller sit eget billetbillede, erstatter det baggrunden. Størrelse og placering følger designet.
+* Teksten står på en lys flade, når der er et billede. QR-koden står på en hvid flade.
 
 = 1.4.0 =
 * Rabatkoder under Billetter → Rabatkoder: procent, et antal gratis billetter, eller hele ordren gratis. En kode kan gælde ét arrangement eller alle, og den kan have et maks. antal brug.

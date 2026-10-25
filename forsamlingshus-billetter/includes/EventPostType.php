@@ -123,7 +123,7 @@ final class EventPostType {
 						<button type="button" class="button fhb-media-pick" data-target="fhb-poster-id" data-preview="fhb-poster-preview"><?php esc_html_e( 'Vælg plakat', 'forsamlingshus-billetter' ); ?></button>
 						<button type="button" class="button fhb-media-clear" data-target="fhb-poster-id" data-preview="fhb-poster-preview"><?php esc_html_e( 'Fjern', 'forsamlingshus-billetter' ); ?></button>
 					</p>
-					<p class="description"><?php esc_html_e( 'Plakaten vises på salgssiden. Uden et billede nedenfor bruges den også på billetten.', 'forsamlingshus-billetter' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Plakaten vises på salgssiden. Uden et billede nedenfor bruges den også på billetten, i stedet for baggrunden fra Billetdesign.', 'forsamlingshus-billetter' ); ?></p>
 				</td>
 			</tr>
 			<tr>
@@ -135,17 +135,7 @@ final class EventPostType {
 						<button type="button" class="button fhb-media-pick" data-target="fhb-ticket-image-id" data-preview="fhb-ticket-image-preview"><?php esc_html_e( 'Vælg billede', 'forsamlingshus-billetter' ); ?></button>
 						<button type="button" class="button fhb-media-clear" data-target="fhb-ticket-image-id" data-preview="fhb-ticket-image-preview"><?php esc_html_e( 'Brug plakaten', 'forsamlingshus-billetter' ); ?></button>
 					</p>
-					<p class="description">
-						<?php
-						echo esc_html(
-							sprintf(
-								/* translators: %s: pixel size and orientation, for example 1240 × 1754 pixels, stående */
-								__( 'Tomt felt bruger plakaten. Billedet skaleres og beskæres, så det fylder hele billetten. Uden billede er billetten ensfarvet. Formatet, der passer, er %s.', 'forsamlingshus-billetter' ),
-								TicketFrame::fit_label()
-							)
-						);
-						?>
-					</p>
+					<p class="description"><?php esc_html_e( 'Tomt felt bruger plakaten. En plakat eller et billede her erstatter baggrunden fra Billetter → Billetdesign. Størrelsen og placeringen af tekst og QR-kode følger designet. Pixelstørrelsen står på designskærmen.', 'forsamlingshus-billetter' ); ?></p>
 				</td>
 			</tr>
 			<tr>
