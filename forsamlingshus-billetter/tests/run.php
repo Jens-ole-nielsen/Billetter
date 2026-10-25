@@ -13,6 +13,7 @@ require dirname( __DIR__ ) . '/vendor/autoload.php';
 require dirname( __DIR__ ) . '/includes/Capacity.php';
 require dirname( __DIR__ ) . '/includes/Token.php';
 require dirname( __DIR__ ) . '/includes/Money.php';
+require dirname( __DIR__ ) . '/includes/Format.php';
 require dirname( __DIR__ ) . '/includes/StripeSignature.php';
 require dirname( __DIR__ ) . '/includes/Color.php';
 require dirname( __DIR__ ) . '/includes/QrCode.php';
@@ -25,6 +26,7 @@ use chillerlan\QRCode\Output\QROutputInterface;
 use chillerlan\QRCode\QRCode as QRLibrary;
 use chillerlan\QRCode\QROptions;
 use Forsamlingshus\Billetter\Capacity;
+use Forsamlingshus\Billetter\Format;
 use Forsamlingshus\Billetter\Color;
 use Forsamlingshus\Billetter\Money;
 use Forsamlingshus\Billetter\Pdf\Document;
@@ -206,6 +208,9 @@ $orders_pdf = ( new OrdersPdf() )->render(
 check( str_contains( $orders_pdf, 'K\\370ber' ) || str_contains( $orders_pdf, 'Køber' ), 'orders PDF has the buyer column' );
 check( str_contains( $orders_pdf, 'Billetter i alt: 4' ), 'orders PDF totals the tickets' );
 check( str_contains( $orders_pdf, 'Vil gerne sidde ved scenen' ), 'orders PDF includes the remark' );
+
+$saturday = new DateTimeImmutable( '2026-11-14 12:00:00' );
+check( 'lørdag 14. november 2026' === Format::long_date( $saturday ), 'event date is Danish' );
 
 if ( $failed > 0 ) {
 	echo "\n{$failed} failed\n";

@@ -25,7 +25,30 @@ final class Format {
 			return '';
 		}
 
-		return wp_date( 'l j. F Y', $dt->getTimestamp() );
+		return self::long_date( $dt );
+	}
+
+	/**
+	 * Weekday and month names stay Danish even when the site language is English.
+	 */
+	public static function long_date( \DateTimeInterface $dt ): string {
+		$weekdays = array( 'søndag', 'mandag', 'tirsdag', 'onsdag', 'torsdag', 'fredag', 'lørdag' );
+		$months = array(
+			1 => 'januar',
+			'februar',
+			'marts',
+			'april',
+			'maj',
+			'juni',
+			'juli',
+			'august',
+			'september',
+			'oktober',
+			'november',
+			'december',
+		);
+
+		return $weekdays[ (int) $dt->format( 'w' ) ] . ' ' . $dt->format( 'j' ) . '. ' . $months[ (int) $dt->format( 'n' ) ] . ' ' . $dt->format( 'Y' );
 	}
 
 	public static function time( string $hi ): string {
@@ -45,7 +68,22 @@ final class Format {
 			return '';
 		}
 
-		return wp_date( 'j. M Y H:i', $dt->getTimestamp() );
+		$months = array(
+			1 => 'jan.',
+			'feb.',
+			'mar.',
+			'apr.',
+			'maj',
+			'jun.',
+			'jul.',
+			'aug.',
+			'sep.',
+			'okt.',
+			'nov.',
+			'dec.',
+		);
+
+		return $dt->format( 'j' ) . '. ' . $months[ (int) $dt->format( 'n' ) ] . ' ' . $dt->format( 'Y' ) . ' ' . $dt->format( 'H:i' );
 	}
 
 	public static function clock( ?string $mysql ): string {

@@ -81,7 +81,7 @@ final class TicketMailer {
 			(string) $context['date'],
 			(string) $context['time'],
 			(int) $order->quantity,
-			(string) $context['price'],
+			Money::format_ore( (int) $order->amount_ore ),
 			(string) $context['order_number'],
 			$remark_line,
 			wp_specialchars_decode( get_bloginfo( 'name' ), ENT_QUOTES )
