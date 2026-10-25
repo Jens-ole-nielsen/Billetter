@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.1.0
+Stable tag: 1.2.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,11 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.2.0 =
+* En betalt Stripe-ordre kan refunderes helt eller delvist. Beløbet sendes til Stripe.
+* Fuld refundering annullerer billetterne og lægger pladserne tilbage. Delvis refundering kan annullere et valgt antal ubrugte billetter, eller ingen.
+* Ordren viser betalingsmåde, refunderet beløb, om refunderingen er fuld eller delvis, og Stripe-refunderingens id.
 
 = 1.1.0 =
 * Oversigten viser, hvor mange billetter der er solgt. Tallet er betalte billetter.

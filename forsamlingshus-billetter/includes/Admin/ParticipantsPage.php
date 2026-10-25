@@ -115,6 +115,8 @@ final class ParticipantsPage {
 										)
 									);
 									?>
+								<?php elseif ( 'cancelled' === (string) $row->status ) : ?>
+									<?php esc_html_e( 'Annulleret', 'forsamlingshus-billetter' ); ?>
 								<?php else : ?>
 									<?php esc_html_e( 'Ikke brugt', 'forsamlingshus-billetter' ); ?>
 								<?php endif; ?>

@@ -79,6 +79,44 @@ final class OrderRepository {
 		return $row instanceof \stdClass ? $row : null;
 	}
 
+	public function lock( int $id ): ?object {
+		global $wpdb;
+
+		$row = $wpdb->get_row(
+			$wpdb->prepare(
+				'SELECT * FROM ' . Database::orders_table() . ' WHERE id = %d FOR UPDATE',
+				$id
+			)
+		);
+
+		return $row instanceof \stdClass ? $row : null;
+	}
+
+	public function apply_refund( int $id, int $refunded_ore, string $refund_ids, string $payment_intent ): bool {
+		global $wpdb;
+
+		$fields = array(
+			'refunded_ore' => max( 0, $refunded_ore ),
+			'stripe_refund_ids' => $refund_ids,
+			'updated_at' => current_time( 'mysql' ),
+		);
+		$formats = array( '%d', '%s', '%s' );
+		if ( 1 === preg_match( '/^pi_[A-Za-z0-9_]+$/', $payment_intent ) ) {
+			$fields['stripe_payment_intent'] = $payment_intent;
+			$formats[] = '%s';
+		}
+
+		$updated = $wpdb->update(
+			Database::orders_table(),
+			$fields,
+			array( 'id' => $id ),
+			$formats,
+			array( '%d' )
+		);
+
+		return false !== $updated;
+	}
+
 	public function set_stripe_session( int $id, string $session_id ): void {
 		global $wpdb;
 

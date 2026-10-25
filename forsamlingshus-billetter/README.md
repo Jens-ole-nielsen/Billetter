@@ -126,7 +126,7 @@ Sådan udgives en ny version:
 
 1. Sæt den samme version i plugin-headeren, i konstanten `FHB_VERSION` og i **Stable tag** i `readme.txt`.
 2. Byg en zip, hvis rodmappe er `forsamlingshus-billetter/`. Filen `forsamlingshus-billetter.php` skal ligge i den mappe.
-3. Opret en GitHub Release. Tagget skal være versionen, for eksempel `v1.1.0`.
+3. Opret en GitHub Release. Tagget skal være versionen, for eksempel `v1.2.0`.
 4. Læg zip-filen op som et asset, der hedder præcis `forsamlingshus-billetter.zip`. Brug ikke den zip, GitHub selv laver af hele arkivet.
 5. Udgiv releasen.
 
@@ -134,12 +134,17 @@ WordPress viser opdateringen, når versionsnummeret i udgivelsen er højere end 
 
 Arkivet er offentligt, så siden kan læse udgivelserne uden et token. Hvis arkivet er privat, gemmes et GitHub-token med læseadgang under **Billetter → Indstillinger**. Feltet er en adgangskode: et tomt felt beholder det gemte token, og afkrydsningen sletter det. Tokenet ligger kun i WordPress og ikke i plugin-filerne.
 
+## Refundering
+
+På en betalt ordre, der er betalt med Stripe, kan I refundere hele restbeløbet eller en del af det under **Billetter → Ordrer**. Beløbet sendes til Stripe som en refundering af betalingen fra Checkout. Ordren viser det refunderede beløb, om det er fuldt eller delvist, og Stripe-id'et.
+
+Fuld refundering annullerer ordrens billetter, så de ikke kan tjekkes ind, og pladserne tæller ikke længere som solgt. Ved en delvis refundering skriver I et beløb i kroner, højst det der er tilbage, og hvor mange ubrugte billetter der skal annulleres. I kan skrive 0, hvis kun pengene skal tilbage. Fakturaordrer og ordrer, der ikke er betalt, kan ikke refunderes her. Hvis Stripe afviser beløbet, ændres ordren ikke.
+
 ## Bevidste grænser
 
 - Ingen WooCommerce.
 - Ingen Quickpay, Pensopay eller ePay. Stripe dækker de almindelige kort- og MobilePay-betalinger, og faktura dækker det, I har aftalt.
 - Ingen pladsplan og ingen navne pr. billet.
-- Ingen automatisk refund fra Stripe. En betalt ordre annulleres ikke herfra; det gøres i Stripe.
 - Ingen momsopgørelse eller elektronisk faktura.
 - Højst 50 billetter pr. bestilling.
 - Prisen er det beløb, køberen betaler. Der regnes ikke moms ud ved siden af.

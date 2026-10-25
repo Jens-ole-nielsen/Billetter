@@ -129,6 +129,26 @@ final class Stock {
 		);
 	}
 
+	/**
+	 * Gives sold seats back after a refund voided that many tickets.
+	 */
+	public function restore_sold( int $event_id, int $qty ): void {
+		global $wpdb;
+
+		if ( $qty < 1 ) {
+			return;
+		}
+
+		$wpdb->query(
+			$wpdb->prepare(
+				'UPDATE ' . Database::stock_table() . ' SET sold = IF(sold >= %d, sold - %d, 0) WHERE event_id = %d',
+				$qty,
+				$qty,
+				$event_id
+			)
+		);
+	}
+
 	public function commit_sale( int $event_id, int $qty ): void {
 		global $wpdb;
 

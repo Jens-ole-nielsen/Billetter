@@ -65,6 +65,8 @@ final class Database {
  payment_method varchar(20) NOT NULL DEFAULT '',
  stripe_session_id varchar(255) NOT NULL DEFAULT '',
  stripe_payment_intent varchar(255) NOT NULL DEFAULT '',
+ refunded_ore bigint(20) NOT NULL DEFAULT 0,
+ stripe_refund_ids varchar(1000) NOT NULL DEFAULT '',
  public_token varchar(64) NOT NULL DEFAULT '',
  expires_at datetime DEFAULT NULL,
  paid_at datetime DEFAULT NULL,

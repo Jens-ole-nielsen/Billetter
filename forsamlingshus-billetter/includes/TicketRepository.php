@@ -105,6 +105,99 @@ final class TicketRepository {
 		return is_array( $rows ) ? $rows : array();
 	}
 
+	public function count_with_status( int $order_id, string $status ): int {
+		global $wpdb;
+
+		if ( ! in_array( $status, array( 'valid', 'checked_in', 'cancelled' ), true ) ) {
+			return 0;
+		}
+
+		return (int) $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COUNT(*) FROM ' . Database::tickets_table() . ' WHERE order_id = %d AND status = %s',
+				$order_id,
+				$status
+			)
+		);
+	}
+
+	/**
+	 * Locks matching tickets for this transaction. Call after START TRANSACTION.
+	 *
+	 * @param list<string> $statuses
+	 * @return list<int>
+	 */
+	public function lock_for_cancel( int $order_id, array $statuses, ?int $limit ): array {
+		global $wpdb;
+
+		$allowed = array();
+		foreach ( $statuses as $status ) {
+			if ( in_array( $status, array( 'valid', 'checked_in' ), true ) ) {
+				$allowed[] = $status;
+			}
+		}
+		if ( array() === $allowed ) {
+			return array();
+		}
+
+		$placeholders = implode( ', ', array_fill( 0, count( $allowed ), '%s' ) );
+		$sql = 'SELECT id FROM ' . Database::tickets_table() . " WHERE order_id = %d AND status IN ({$placeholders}) ORDER BY sequence_no ASC";
+		$params = array_merge( array( $order_id ), $allowed );
+		if ( null !== $limit ) {
+			$sql .= ' LIMIT %d';
+			$params[] = max( 0, $limit );
+		}
+		$sql .= ' FOR UPDATE';
+		$ids = $wpdb->get_col( $wpdb->prepare( $sql, ...$params ) );
+		if ( ! is_array( $ids ) ) {
+			return array();
+		}
+
+		return array_map(
+			static function ( $id ): int {
+				return (int) $id;
+			},
+			$ids
+		);
+	}
+
+	/**
+	 * @param list<int>    $ids
+	 * @param list<string> $from
+	 */
+	public function cancel_ids( array $ids, array $from ): int {
+		global $wpdb;
+
+		$ids = array_values(
+			array_filter(
+				array_map(
+					static function ( $id ): int {
+						return (int) $id;
+					},
+					$ids
+				)
+			)
+		);
+		$from = array_values(
+			array_filter(
+				$from,
+				static function ( string $status ): bool {
+					return in_array( $status, array( 'valid', 'checked_in' ), true );
+				}
+			)
+		);
+		if ( array() === $ids || array() === $from ) {
+			return 0;
+		}
+
+		$id_marks = implode( ', ', array_fill( 0, count( $ids ), '%d' ) );
+		$status_marks = implode( ', ', array_fill( 0, count( $from ), '%s' ) );
+		$sql = 'UPDATE ' . Database::tickets_table() . " SET status = 'cancelled' WHERE id IN ({$id_marks}) AND status IN ({$status_marks})";
+		$updated = $wpdb->query( $wpdb->prepare( $sql, ...array_merge( $ids, $from ) ) );
+
+		return is_int( $updated ) ? $updated : 0;
+	}
+
 	public function mark_checked_in( int $ticket_id, int $user_id ): bool {
 		global $wpdb;
 

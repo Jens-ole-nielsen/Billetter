@@ -49,6 +49,7 @@ final class Plugin {
 
 		$mailer = new TicketMailer( $orders, $tickets, $design, $settings );
 		$fulfillment = new Fulfillment( $orders, $tickets, $stock, $mailer, $settings );
+		$refunds = new StripeRefund( $orders, $tickets, $stock, $settings );
 		$sales = new SalesPage( $stock, $methods, $orders, $fulfillment );
 
 		( new TicketShortcodes() )->hooks();
@@ -61,7 +62,7 @@ final class Plugin {
 		( new Cron( $fulfillment ) )->hooks();
 		( new Privacy( $orders ) )->hooks();
 		( new Menu() )->hooks();
-		( new OrdersPage( $orders, $fulfillment, $mailer, $tickets ) )->hooks();
+		( new OrdersPage( $orders, $fulfillment, $mailer, $tickets, $refunds ) )->hooks();
 		( new ParticipantsPage( $tickets ) )->hooks();
 		( new DesignPage( $design ) )->hooks();
 		( new SettingsPage( $settings ) )->hooks();

@@ -148,9 +148,14 @@ final class CheckinPage {
 				if ( ! is_array( $ticket ) ) {
 					continue;
 				}
-				$label = 'checked_in' === ( $ticket['status'] ?? '' )
-					? __( 'Fremmødt', 'forsamlingshus-billetter' ) . ' ' . (string) ( $ticket['checked_in_at'] ?? '' )
-					: __( 'Ikke brugt', 'forsamlingshus-billetter' );
+				$status = (string) ( $ticket['status'] ?? '' );
+				if ( 'checked_in' === $status ) {
+					$label = __( 'Fremmødt', 'forsamlingshus-billetter' ) . ' ' . (string) ( $ticket['checked_in_at'] ?? '' );
+				} elseif ( 'cancelled' === $status ) {
+					$label = __( 'Annulleret', 'forsamlingshus-billetter' );
+				} else {
+					$label = __( 'Ikke brugt', 'forsamlingshus-billetter' );
+				}
 				echo '<li>' . esc_html( sprintf( /* translators: 1: sequence, 2: status */ __( 'Billet %1$s: %2$s', 'forsamlingshus-billetter' ), (string) ( $ticket['sequence'] ?? '' ), $label ) ) . '</li>';
 			}
 			echo '</ul>';
