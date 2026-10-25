@@ -20,6 +20,11 @@
 				row.hidden = !input.checked;
 			}
 		});
+		var qrBlock = preview.querySelector("[data-block='qr']");
+		var qrField = document.querySelector("[data-fhb-field='show_qr']");
+		if (qrBlock && qrField) {
+			qrBlock.classList.toggle("is-plain", !qrField.checked);
+		}
 	}
 
 	function padsOn() {

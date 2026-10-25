@@ -173,7 +173,7 @@ final class DesignPage {
 										<?php echo esc_html( $label ); ?>
 									</label><br>
 								<?php endforeach; ?>
-								<p class="description"><?php esc_html_e( 'Koden til manuel indtastning står altid på billetten, også hvis QR-koden er slået fra. Den følger QR-feltet.', 'forsamlingshus-billetter' ); ?></p>
+								<p class="description"><?php esc_html_e( 'Koden til manuel indtastning står altid på billetten, også hvis QR-koden er slået fra. Den følger QR-feltet. Sammen med QR-koden er teksten sort på den hvide flade. Uden QR-koden er den almindelig tekst i samme farve som de andre felter.', 'forsamlingshus-billetter' ); ?></p>
 							</td>
 						</tr>
 					</table>
@@ -229,8 +229,9 @@ final class DesignPage {
 			echo '<p class="fhb-block" data-block="' . esc_attr( $name ) . '" data-fhb-row="' . esc_attr( $blocks[ $name ] ) . '" style="' . esc_attr( $this->block_style( $design, $name ) ) . '"' . $hidden . '>';
 			echo '<span>' . esc_html( $pair[0] ) . '</span><strong>' . esc_html( $pair[1] ) . '</strong></p>';
 		}
-		$qr_hidden = empty( $design['show_qr'] ) ? ' hidden' : '';
-		echo '<div class="fhb-block fhb-block-qr" data-block="qr" style="' . esc_attr( $this->block_style( $design, 'qr' ) ) . '">';
+		$qr_on = ! empty( $design['show_qr'] );
+		$qr_hidden = $qr_on ? '' : ' hidden';
+		echo '<div class="fhb-block fhb-block-qr' . ( $qr_on ? '' : ' is-plain' ) . '" data-block="qr" style="' . esc_attr( $this->block_style( $design, 'qr' ) ) . '">';
 		echo '<div data-fhb-row="show_qr" class="fhb-ticket-qr"' . $qr_hidden . '>' . $this->sample_qr() . '</div>';
 		echo '<p class="fhb-ticket-code">' . esc_html__( 'Billet 1 af 2', 'forsamlingshus-billetter' ) . '<br><code>0123 4567 89ab cdef</code><br><code>0123 4567 89ab cdef</code><br>' . esc_html__( 'Vis koden ved indgangen', 'forsamlingshus-billetter' ) . '</p>';
 		echo '</div>';

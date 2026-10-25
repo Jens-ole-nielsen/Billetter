@@ -421,6 +421,53 @@ $grouped_first = implode( ' ', array_slice( $grouped_parts, 0, 4 ) );
 $grouped_second = implode( ' ', array_slice( $grouped_parts, 4 ) );
 check( str_contains( $ticket_pdf, $grouped_first ) && str_contains( $ticket_pdf, $grouped_second ), 'manual code is on the ticket' );
 
+$code_color = $placed;
+$code_color['text'] = '#0000FF';
+$code_color['pad_blocks'] = '0';
+$code_color['show_event'] = false;
+$code_color['show_date'] = false;
+$code_color['show_time'] = false;
+$code_color['show_buyer'] = false;
+$code_color['show_price'] = false;
+$code_color['show_qr'] = true;
+$code_color['blocks'] = array( 'qr' => array( 'x' => 80, 'y' => 200 ) );
+$code_on = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	$code_color,
+	null,
+	array(
+		'data' => $jpeg,
+		'w' => 2,
+		'h' => 2,
+	)
+);
+check( str_contains( $code_on, '0.000 0.000 0.000 rg' ), 'manual code on the QR is black' );
+check( ! str_contains( $code_on, '0.000 0.000 1.000 rg' ), 'manual code on the QR ignores the ticket text color' );
+$code_color['show_qr'] = false;
+$code_off = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	$code_color,
+	null,
+	array(
+		'data' => $jpeg,
+		'w' => 2,
+		'h' => 2,
+	)
+);
+check( str_contains( $code_off, $grouped_first ), 'manual code stays on the ticket when the QR is off' );
+check( str_contains( $code_off, '0.000 0.000 1.000 rg' ), 'manual code without the QR uses the ticket text color' );
+check( ! str_contains( $code_off, '1.000 1.000 1.000 rg' ), 'manual code without the QR has no white pad' );
+
 $orders_pdf = ( new OrdersPdf() )->render(
 	array(
 		array(

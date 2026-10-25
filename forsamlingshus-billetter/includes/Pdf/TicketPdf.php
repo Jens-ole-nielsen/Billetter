@@ -20,7 +20,9 @@ defined( 'ABSPATH' ) || exit;
  * Renders the designed ticket. Callers pass already formatted Danish strings.
  *
  * Block positions come from the designer as per mille of the page. Text and
- * the logo can sit on a light pad. The QR code always has a white background.
+ * the logo can sit on a light pad. The QR code always has a white background,
+ * and the manual code on that pad is black. Without the QR code, that text
+ * uses the same color as the other fields.
  */
 final class TicketPdf {
 
@@ -110,7 +112,9 @@ final class TicketPdf {
 			$page_h,
 			$blocks['qr'],
 			$scale,
-			! empty( $context['show_qr'] )
+			! empty( $context['show_qr'] ),
+			$value_ink,
+			$pads
 		);
 	}
 
@@ -198,9 +202,10 @@ final class TicketPdf {
 	}
 
 	/**
-	 * @param array{x:int,y:int} $block
+	 * @param array{x:int,y:int}       $block
+	 * @param array{0:int,1:int,2:int} $ink Text color used when the QR code is off.
 	 */
-	private function place_qr( Document $doc, string $token, string $ticket_label, string $order_number, float $page_w, float $page_h, array $block, float $scale, bool $show_qr ): void {
+	private function place_qr( Document $doc, string $token, string $ticket_label, string $order_number, float $page_w, float $page_h, array $block, float $scale, bool $show_qr, array $ink, bool $pads ): void {
 		$x = TicketFrame::origin( $page_w, $block['x'] );
 		$y = TicketFrame::origin( $page_h, $block['y'] );
 		$groups = preg_split( '/\s+/', trim( Token::grouped( $token ) ) );
@@ -238,15 +243,18 @@ final class TicketPdf {
 		$label_size *= $fit;
 		$code_size *= $fit;
 		$line_h *= $fit;
-		$doc->fill_rgb( 255, 255, 255 );
-		$doc->rect( $placed['x'], $placed['y'], $placed['w'], $placed['h'], 'F' );
 		$baseline = $placed['y'] + 10 + $label_size;
 		if ( $show_qr ) {
+			$doc->fill_rgb( 255, 255, 255 );
+			$doc->rect( $placed['x'], $placed['y'], $placed['w'], $placed['h'], 'F' );
 			$matrix = QrCode::matrix( Token::normalize( $token ) );
 			$doc->qr( $placed['x'] + ( ( $placed['w'] - $qr ) / 2 ), $placed['y'] + $pad, $qr, $matrix );
 			$baseline = $placed['y'] + $pad + $qr + 8 + $label_size;
+			$doc->fill_rgb( 0, 0, 0 );
+		} else {
+			$this->pad( $doc, $placed['x'], $placed['y'], $placed['w'], $placed['h'], $pads );
+			$doc->fill_rgb( $ink[0], $ink[1], $ink[2] );
 		}
-		$doc->fill_rgb( 28, 28, 28 );
 		$this->centered_in( $doc, $placed['x'], $placed['w'], $baseline, $label_size, $ticket_label, true );
 		$baseline += $line_h;
 		foreach ( $code_lines as $line ) {

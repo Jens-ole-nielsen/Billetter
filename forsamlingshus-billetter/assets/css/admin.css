@@ -93,16 +93,35 @@
 	background: #fff;
 }
 
+.fhb-block-qr.is-plain {
+	padding: 3px 6px;
+	background: transparent;
+	box-shadow: none;
+}
+
+.fhb-ticket-preview.has-pad .fhb-block-qr.is-plain {
+	background: rgba(255, 255, 255, 0.94);
+	box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08);
+}
+
 .fhb-ticket-code {
 	margin: 0;
 	text-align: center;
 	font-size: 10px;
 	line-height: 1.3;
+	color: #000;
+}
+
+.fhb-block-qr.is-plain .fhb-ticket-code {
+	color: var(--fhb-text, #1c1c1c);
 }
 
 .fhb-ticket-code code {
 	display: block;
 	white-space: nowrap;
+	background: transparent;
+	padding: 0;
+	color: inherit;
 }
 
 .fhb-checkin video {

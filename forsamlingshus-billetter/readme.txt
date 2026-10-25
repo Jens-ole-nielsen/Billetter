@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.6.0
+Stable tag: 1.6.1
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,10 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.6.1 =
+* Teksten ved QR-koden er altid sort, fordi fladen er hvid.
+* Er QR-koden slået fra, står koden til manuel indtastning som almindelig tekst i samme farve som de andre felter. Den hvide flade følger kun QR-koden.
 
 = 1.6.0 =
 * Første klik på Opdater installerer den nye version. Et tjek, der ikke får svar fra GitHub, fjerner ikke den udgivelse, som Plugins-siden allerede viste.
