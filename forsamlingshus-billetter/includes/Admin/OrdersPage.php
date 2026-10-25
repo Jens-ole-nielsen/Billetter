@@ -13,11 +13,13 @@ use Forsamlingshus\Billetter\Capabilities;
 use Forsamlingshus\Billetter\Events;
 use Forsamlingshus\Billetter\Format;
 use Forsamlingshus\Billetter\Fulfillment;
+use Forsamlingshus\Billetter\Mail\TicketMailer;
 use Forsamlingshus\Billetter\Money;
 use Forsamlingshus\Billetter\OrderNumber;
 use Forsamlingshus\Billetter\OrderRepository;
 use Forsamlingshus\Billetter\OrderStatus;
 use Forsamlingshus\Billetter\Pdf\OrdersPdf;
+use Forsamlingshus\Billetter\TicketRepository;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -30,7 +32,9 @@ final class OrdersPage {
 
 	public function __construct(
 		private OrderRepository $orders,
-		private Fulfillment $fulfillment
+		private Fulfillment $fulfillment,
+		private TicketMailer $mailer,
+		private TicketRepository $tickets
 	) {
 	}
 
@@ -39,6 +43,7 @@ final class OrdersPage {
 		add_action( 'admin_post_fhb_mark_paid', array( $this, 'mark_paid' ) );
 		add_action( 'admin_post_fhb_cancel_order', array( $this, 'cancel' ) );
 		add_action( 'admin_post_fhb_resend_tickets', array( $this, 'resend' ) );
+		add_action( 'admin_post_fhb_view_tickets', array( $this, 'view_tickets' ) );
 		add_action( 'admin_post_fhb_export_orders', array( $this, 'export' ) );
 	}
 
@@ -193,12 +198,41 @@ final class OrdersPage {
 	public function resend(): void {
 		$this->guard( 'fhb_resend_tickets' );
 		$order_id = isset( $_POST['order_id'] ) ? absint( $_POST['order_id'] ) : 0;
+		if ( ! $this->paid_with_tickets( $order_id ) ) {
+			Notices::flash( 'error', __( 'Billetterne kunne ikke sendes.', 'forsamlingshus-billetter' ) );
+			$this->back();
+		}
 		if ( $this->fulfillment->resend( $order_id ) ) {
 			Notices::flash( 'success', __( 'Billetterne er sendt igen.', 'forsamlingshus-billetter' ) );
 		} else {
 			Notices::flash( 'error', __( 'Billetterne kunne ikke sendes.', 'forsamlingshus-billetter' ) );
 		}
 		$this->back();
+	}
+
+	public function view_tickets(): void {
+		$order_id = isset( $_REQUEST['order_id'] ) ? absint( $_REQUEST['order_id'] ) : 0;
+		if ( ! Capabilities::can( Capabilities::ORDERS ) ) {
+			wp_die( esc_html__( 'Du har ikke adgang.', 'forsamlingshus-billetter' ), '', array( 'response' => 403 ) );
+		}
+		check_admin_referer( 'fhb_view_tickets_' . $order_id );
+		$order = $this->orders->find( $order_id );
+		if ( ! $order || ! $this->paid_with_tickets( $order_id ) ) {
+			Notices::flash( 'error', __( 'Der er ingen billet-PDF for den ordre.', 'forsamlingshus-billetter' ) );
+			$this->back();
+		}
+		$binary = $this->mailer->pdf_for_order( $order );
+		if ( ! is_string( $binary ) || ! str_starts_with( $binary, '%PDF' ) ) {
+			Notices::flash( 'error', __( 'Billet-PDF kunne ikke laves.', 'forsamlingshus-billetter' ) );
+			$this->back();
+		}
+		$filename = 'billetter-' . OrderNumber::format( $order_id ) . '.pdf';
+		nocache_headers();
+		header( 'Content-Type: application/pdf' );
+		header( 'Content-Disposition: inline; filename="' . $filename . '"' );
+		header( 'Content-Length: ' . strlen( $binary ) );
+		echo $binary; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- binary PDF download.
+		exit;
 	}
 
 	public function export(): void {
@@ -239,9 +273,32 @@ final class OrdersPage {
 		if ( $unpaid ) {
 			$this->action_form( 'fhb_cancel_order', (int) $order->id, __( 'Annuller', 'forsamlingshus-billetter' ) );
 		}
-		if ( OrderStatus::PAID === (string) $order->status ) {
+		if ( OrderStatus::PAID === (string) $order->status && array() !== $this->tickets->for_order( (int) $order->id ) ) {
+			$this->view_link( (int) $order->id );
 			$this->action_form( 'fhb_resend_tickets', (int) $order->id, __( 'Send billetter igen', 'forsamlingshus-billetter' ) );
 		}
+	}
+
+	private function view_link( int $order_id ): void {
+		$url = wp_nonce_url(
+			add_query_arg(
+				array(
+					'action' => 'fhb_view_tickets',
+					'order_id' => $order_id,
+				),
+				admin_url( 'admin-post.php' )
+			),
+			'fhb_view_tickets_' . $order_id
+		);
+		echo '<p style="margin:0 0 6px;"><a class="button button-secondary" target="_blank" rel="noopener" href="' . esc_url( $url ) . '">' . esc_html__( 'Se billet-PDF', 'forsamlingshus-billetter' ) . '</a></p>';
+	}
+
+	private function paid_with_tickets( int $order_id ): bool {
+		$order = $this->orders->find( $order_id );
+
+		return $order
+			&& OrderStatus::PAID === (string) $order->status
+			&& array() !== $this->tickets->for_order( $order_id );
 	}
 
 	private function action_form( string $action, int $order_id, string $label ): void {

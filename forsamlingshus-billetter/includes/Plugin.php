@@ -17,6 +17,7 @@ use Forsamlingshus\Billetter\Admin\Notices;
 use Forsamlingshus\Billetter\Admin\OrdersPage;
 use Forsamlingshus\Billetter\Admin\ParticipantsPage;
 use Forsamlingshus\Billetter\Admin\SettingsPage;
+use Forsamlingshus\Billetter\Elementor\Integration;
 use Forsamlingshus\Billetter\Mail\TicketMailer;
 use Forsamlingshus\Billetter\Payments\InvoiceGateway;
 use Forsamlingshus\Billetter\Payments\PaymentMethods;
@@ -46,10 +47,13 @@ final class Plugin {
 		$methods->register( new InvoiceGateway() );
 		do_action( 'fhb_register_payment_methods', $methods );
 
-		$mailer = new TicketMailer( $orders, $tickets, $design );
+		$mailer = new TicketMailer( $orders, $tickets, $design, $settings );
 		$fulfillment = new Fulfillment( $orders, $tickets, $stock, $mailer, $settings );
 		$sales = new SalesPage( $stock, $methods, $orders, $fulfillment );
 
+		( new TicketShortcodes() )->hooks();
+		( new Integration() )->hooks();
+		( new Updates( $settings ) )->hooks();
 		( new EventPostType( $stock, $sales ) )->hooks();
 		$sales->hooks();
 		( new Checkout( $orders, $stock, $methods, $fulfillment, $mailer ) )->hooks();
@@ -57,7 +61,7 @@ final class Plugin {
 		( new Cron( $fulfillment ) )->hooks();
 		( new Privacy( $orders ) )->hooks();
 		( new Menu() )->hooks();
-		( new OrdersPage( $orders, $fulfillment ) )->hooks();
+		( new OrdersPage( $orders, $fulfillment, $mailer, $tickets ) )->hooks();
 		( new ParticipantsPage( $tickets ) )->hooks();
 		( new DesignPage( $design ) )->hooks();
 		( new SettingsPage( $settings ) )->hooks();

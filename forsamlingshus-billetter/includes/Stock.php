@@ -77,6 +77,22 @@ final class Stock {
 		return Capacity::remaining( (int) $row->capacity, (int) $row->reserved, (int) $row->sold );
 	}
 
+	/**
+	 * Paid tickets only.
+	 *
+	 * Checkout puts both Stripe and invoice orders in `reserved`. `sold` increases
+	 * in commit_sale(), which runs when the order becomes paid. An unpaid invoice
+	 * is therefore not counted here.
+	 */
+	public function sold( int $event_id ): int {
+		$row = $this->get( $event_id );
+		if ( ! $row ) {
+			return 0;
+		}
+
+		return max( 0, (int) $row->sold );
+	}
+
 	public function reserve( int $event_id, int $qty ): bool {
 		global $wpdb;
 

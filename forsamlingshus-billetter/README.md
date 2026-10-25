@@ -54,6 +54,8 @@ Faktura her er en aftale med huset. Pluginnet laver ikke en EAN- eller momsfaktu
 
 Salgssiden er en almindelig WordPress-side med kortkoden `[fhb_event id="…"]`. Linket står i boksen **Billetsalg** og i oversigten.
 
+Oversigten viser kolonnen **Solgt**. Tallet er betalte billetter. En faktura, der endnu ikke er markeret betalt, tæller ikke med. Den holder pladsen reserveret, så **Ledige** er lavere, indtil ordren betales eller annulleres.
+
 Køberen oplyser navn, e-mail, telefon, antal og en valgfri bemærkning (for eksempel at de vil sidde sammen med et andet selskab). Navnet skrives på alle billetterne i ordren. Der er ikke et navn pr. billet.
 
 Der kan højst købes 50 billetter ad gangen. En Stripe-bestilling holder pladserne i ca. 30 minutter. Salget stopper, når der ikke er flere ledige pladser, også mens nogen er i gang med at betale.
@@ -62,7 +64,7 @@ Der kan højst købes 50 billetter ad gangen. En Stripe-bestilling holder pladse
 
 Efter betaling sendes én PDF til køberen. Der er én side pr. billet, og hver billet har sin egen QR-kode. Koden er et tilfældigt, ugætteligt tal. Den samme kode står også i grupper, så den kan tastes ind, hvis kameraet ikke virker.
 
-Under **Billetter → Billetdesign** vælger I logo, overskrift, farver og om arrangement, dato, tid, køber, pris og QR-kode skal med. Forhåndsvisningen følger valgene.
+Under **Billetter → Billetdesign** vælger I logo, overskrift, farver og om arrangement, dato, tid, køber, pris og QR-kode skal med. Forhåndsvisningen følger valgene. I kan i stedet vælge en Elementor-skabelon. Så bruges den til PDF-billetten.
 
 ## Indtjekning
 
@@ -80,7 +82,7 @@ Kameraet kræver HTTPS. Manuel indtastning virker også uden kamera.
 
 ## Ordrer og deltagere
 
-- **Ordrer** viser køber, arrangement, antal, beløb, status, bemærkning og betalingsmåde. Herfra kan en faktura markeres som betalt, en ubetalt ordre annulleres, og billetter kan sendes igen.
+- **Ordrer** viser køber, arrangement, antal, beløb, status, bemærkning og betalingsmåde. Herfra kan en faktura markeres som betalt, og en ubetalt ordre annulleres. På en betalt ordre, der allerede har billetter, kan I se den PDF, der blev sendt, og sende billetmailen igen.
 - **Eksporter PDF** laver en liste med køber, antal billetter og siddebemærkning.
 - **Deltagere** er én række pr. billet. Køberens navn gentages på hver billet.
 
@@ -96,6 +98,42 @@ define( 'FHB_REMOVE_DATA', true );
 
 Så fjernes tabeller, nøgler, rollen Dørvagt, arrangementerne og de salgssider, pluginnet har oprettet.
 
+## Elementor-skabelon til billetten
+
+1. Installer og aktivér Elementor.
+2. Opret en skabelon under **Skabeloner**. Hold den enkel: tekst, billeder og kortkoder. Et kompliceret layout bliver ikke altid ens, når det bliver til PDF.
+3. Sæt disse kortkoder ind, der hvor oplysningerne skal stå: `[fhb_event_name]`, `[fhb_date]`, `[fhb_time]`, `[fhb_buyer]`, `[fhb_price]`, `[fhb_remark]`, `[fhb_qr]`. `[fhb_sequence]` skriver for eksempel "Billet 1 af 2". I kan også vælge de dynamiske tags i gruppen **Billet**. Arrangementets navn hedder `[fhb_event_name]`, fordi `[fhb_event]` allerede er salgssiden.
+4. Gem skabelonen.
+5. Gå til **Billetter → Billetdesign**, og vælg skabelonen i feltet **Elementor-skabelon**. Vælg **Indbygget design**, hvis logo, farver og felter på samme side skal bruges.
+
+Hvis Elementor ikke er aktivt, eller skabelonen ikke kan tegnes, bruges det indbyggede design. Siden viser en kort besked, når Elementor mangler.
+
+## MailPoet til billetmailen
+
+1. Installer og aktivér MailPoet.
+2. Lav den mail, køberen skal have. I teksten kan I bruge `[fhb_buyer]`, `[fhb_event_name]`, `[fhb_date]`, `[fhb_time]`, `[fhb_quantity]`, `[fhb_amount]`, `[fhb_order]` og `[fhb_remark]`. `[fhb_qr]` er QR-koden for den første billet. Hver side i PDF-filen har sin egen kode.
+3. Gå til **Billetter → Indstillinger**, og vælg mailen under **MailPoet-mail**.
+
+PDF-filen vedhæftes stadig. Selve afsendelsen sker med WordPress (`wp_mail`), ikke via MailPoets udsendelseskø. **Skriv til købere** er uændret og bruger den almindelige tekstmail.
+
+Hvis MailPoet ikke er aktivt, eller mailen ikke kan laves, sendes den indbyggede tekstmail.
+
+## Opdateringer
+
+Pluginnet kan vise en almindelig opdatering under **Plugins**. Kilden er GitHub-udgivelser på [Jens-ole-nielsen/Events](https://github.com/Jens-ole-nielsen/Events).
+
+Sådan udgives en ny version:
+
+1. Sæt den samme version i plugin-headeren, i konstanten `FHB_VERSION` og i **Stable tag** i `readme.txt`.
+2. Byg en zip, hvis rodmappe er `forsamlingshus-billetter/`. Filen `forsamlingshus-billetter.php` skal ligge i den mappe.
+3. Opret en GitHub Release. Tagget skal være versionen, for eksempel `v1.1.0`.
+4. Læg zip-filen op som et asset, der hedder præcis `forsamlingshus-billetter.zip`. Brug ikke den zip, GitHub selv laver af hele arkivet.
+5. Udgiv releasen.
+
+WordPress viser opdateringen, når versionsnummeret i udgivelsen er højere end det, der er installeret.
+
+Arkivet er privat. Uden et token kan siden ikke læse udgivelserne. Under **Billetter → Indstillinger** gemmes et GitHub-token med læseadgang. Feltet er en adgangskode: et tomt felt beholder det gemte token, og afkrydsningen sletter det. Tokenet ligger kun i WordPress og ikke i plugin-filerne.
+
 ## Bevidste grænser
 
 - Ingen WooCommerce.
@@ -105,5 +143,7 @@ Så fjernes tabeller, nøgler, rollen Dørvagt, arrangementerne og de salgssider
 - Ingen momsopgørelse eller elektronisk faktura.
 - Højst 50 billetter pr. bestilling.
 - Prisen er det beløb, køberen betaler. Der regnes ikke moms ud ved siden af.
+- Elementor-skabelonen tegnes om til PDF med et enkelt HTML-værktøj. Avanceret layout fra Elementor kan derfor se anderledes ud på billetten.
+- MailPoet bruges kun som brødtekst. Pluginnet sender selv mailen, så PDF-filen kan vedhæftes.
 
 Betalingsmåderne ligger bag et lille interface (`PaymentMethod`). Stripe og faktura er de to, der følger med. En anden metode kan registreres med handlingen `fhb_register_payment_methods`.

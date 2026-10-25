@@ -278,6 +278,7 @@ final class EventPostType {
 	public function columns( array $columns ): array {
 		$columns['fhb_when'] = __( 'Tidspunkt', 'forsamlingshus-billetter' );
 		$columns['fhb_price'] = __( 'Pris', 'forsamlingshus-billetter' );
+		$columns['fhb_sold'] = __( 'Solgt', 'forsamlingshus-billetter' );
 		$columns['fhb_left'] = __( 'Ledige', 'forsamlingshus-billetter' );
 		$columns['fhb_link'] = __( 'Salgsside', 'forsamlingshus-billetter' );
 
@@ -293,6 +294,8 @@ final class EventPostType {
 			echo esc_html( trim( Format::date( (string) $event['date'] ) . ' ' . Format::time( (string) $event['time'] ) ) );
 		} elseif ( 'fhb_price' === $column ) {
 			echo esc_html( Money::format_ore( (int) $event['price_ore'] ) );
+		} elseif ( 'fhb_sold' === $column ) {
+			echo esc_html( (string) $this->stock->sold( $post_id ) );
 		} elseif ( 'fhb_left' === $column ) {
 			echo esc_html( (string) $this->stock->remaining( $post_id ) );
 		} elseif ( 'fhb_link' === $column ) {

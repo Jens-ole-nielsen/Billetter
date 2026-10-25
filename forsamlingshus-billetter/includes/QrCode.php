@@ -74,4 +74,36 @@ final class QrCode {
 
 		return $svg;
 	}
+
+	/**
+	 * PNG bytes for HTML-to-PDF. Empty when GD cannot draw the symbol.
+	 */
+	public static function png( string $data ): string {
+		if ( '' === $data || ! function_exists( 'imagepng' ) ) {
+			return '';
+		}
+
+		try {
+			$options = new QROptions(
+				array(
+					'outputType' => QROutputInterface::GDIMAGE_PNG,
+					'outputBase64' => false,
+					'eccLevel' => EccLevel::M,
+					'addQuietzone' => true,
+					'quietzoneSize' => 2,
+					'scale' => 6,
+				)
+			);
+			$png = ( new Library( $options ) )->render( $data );
+		} catch ( \Throwable $error ) {
+			unset( $error );
+			return '';
+		}
+
+		if ( ! is_string( $png ) || ! str_starts_with( $png, "\x89PNG" ) ) {
+			return '';
+		}
+
+		return $png;
+	}
 }

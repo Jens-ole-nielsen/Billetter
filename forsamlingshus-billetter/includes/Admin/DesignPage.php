@@ -69,6 +69,10 @@ final class DesignPage {
 					<input type="hidden" name="action" value="fhb_save_design">
 					<table class="form-table" role="presentation">
 						<tr>
+							<th scope="row"><label for="fhb-elementor-template"><?php esc_html_e( 'Elementor-skabelon', 'forsamlingshus-billetter' ); ?></label></th>
+							<td><?php $this->elementor_field( (int) $design['elementor_template_id'] ); ?></td>
+						</tr>
+						<tr>
 							<th scope="row"><?php esc_html_e( 'Logo', 'forsamlingshus-billetter' ); ?></th>
 							<td>
 								<input type="hidden" id="fhb-logo-id" name="logo_id" value="<?php echo esc_attr( (string) $design['logo_id'] ); ?>">
@@ -157,6 +161,36 @@ final class DesignPage {
 	 */
 	private function preview_style( array $design ): string {
 		return '--fhb-primary:' . (string) $design['color_primary'] . ';--fhb-text:' . (string) $design['color_text'] . ';--fhb-bg:' . (string) $design['color_background'] . ';';
+	}
+
+	private function elementor_field( int $selected ): void {
+		if ( ! class_exists( '\Elementor\Plugin' ) ) {
+			echo '<input type="hidden" name="elementor_template_id" value="' . esc_attr( (string) $selected ) . '">';
+			echo '<p id="fhb-elementor-template">' . esc_html__( 'Elementor er ikke aktivt, så det indbyggede design bruges.', 'forsamlingshus-billetter' ) . '</p>';
+			return;
+		}
+
+		$posts = get_posts(
+			array(
+				'post_type' => 'elementor_library',
+				'post_status' => array( 'publish', 'private', 'draft' ),
+				'posts_per_page' => 100,
+				'orderby' => 'title',
+				'order' => 'ASC',
+			)
+		);
+		echo '<select id="fhb-elementor-template" name="elementor_template_id">';
+		echo '<option value="0">' . esc_html__( 'Indbygget design', 'forsamlingshus-billetter' ) . '</option>';
+		if ( is_array( $posts ) ) {
+			foreach ( $posts as $post ) {
+				if ( ! $post instanceof \WP_Post ) {
+					continue;
+				}
+				echo '<option value="' . esc_attr( (string) $post->ID ) . '" ' . selected( $selected, (int) $post->ID, false ) . '>' . esc_html( get_the_title( $post ) ) . '</option>';
+			}
+		}
+		echo '</select>';
+		echo '<p class="description">' . esc_html__( 'Vælg en gemt Elementor-skabelon, hvis PDF-billetten skal bruge den. Indbygget design bruger felterne nedenfor. I skabelonen kan I bruge kortkoderne [fhb_event_name], [fhb_date], [fhb_time], [fhb_buyer], [fhb_price], [fhb_remark] og [fhb_qr], eller de dynamiske tags i gruppen Billet. Hold skabelonen enkel. Et kompliceret layout bliver ikke altid ens i PDF-filen.', 'forsamlingshus-billetter' ) . '</p>';
 	}
 
 	private function sample_qr(): string {

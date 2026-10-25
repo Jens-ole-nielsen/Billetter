@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Forsamlingshus\Billetter\Admin;
 
 use Forsamlingshus\Billetter\Capabilities;
+use Forsamlingshus\Billetter\Mail\MailPoetBody;
 use Forsamlingshus\Billetter\Settings;
 
 defined( 'ABSPATH' ) || exit;
@@ -84,6 +85,22 @@ final class SettingsPage {
 							<p class="description"><?php esc_html_e( 'I Stripe: Developers → Webhooks → Add endpoint. Vælg checkout.session.completed, checkout.session.async_payment_succeeded, checkout.session.async_payment_failed og checkout.session.expired.', 'forsamlingshus-billetter' ); ?></p>
 						</td>
 					</tr>
+					<tr>
+						<th scope="row"><label for="fhb-mailpoet"><?php esc_html_e( 'MailPoet-mail', 'forsamlingshus-billetter' ); ?></label></th>
+						<td>
+							<?php $this->mailpoet_field( (int) $values['mailpoet_newsletter_id'] ); ?>
+						</td>
+					</tr>
+					<tr>
+						<th scope="row"><label for="fhb-github"><?php esc_html_e( 'GitHub-token', 'forsamlingshus-billetter' ); ?></label></th>
+						<td>
+							<input class="regular-text" type="password" id="fhb-github" name="github_token" value="" autocomplete="new-password" placeholder="<?php echo esc_attr( '' !== $values['github_token'] ? __( 'Et token er gemt', 'forsamlingshus-billetter' ) : '' ); ?>">
+							<?php if ( '' !== $values['github_token'] ) : ?>
+								<label><input type="checkbox" name="clear_github" value="1"> <?php esc_html_e( 'Slet det gemte token', 'forsamlingshus-billetter' ); ?></label>
+							<?php endif; ?>
+							<p class="description"><?php esc_html_e( 'Opdateringer kommer fra GitHub-udgivelser på Jens-ole-nielsen/Events. Udgivelsen skal indeholde filen forsamlingshus-billetter.zip. Et privat arkiv kræver et token med læseadgang. Lad feltet stå tomt for at beholde det gemte token.', 'forsamlingshus-billetter' ); ?></p>
+						</td>
+					</tr>
 				</table>
 				<?php submit_button( __( 'Gem indstillinger', 'forsamlingshus-billetter' ) ); ?>
 			</form>
@@ -123,15 +140,46 @@ final class SettingsPage {
 			$webhook = empty( $_POST['clear_webhook'] ) ? $current['webhook_secret'] : '';
 		}
 
+		$github = isset( $_POST['github_token'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['github_token'] ) ) ) : '';
+		if ( '' === $github ) {
+			$github = empty( $_POST['clear_github'] ) ? $current['github_token'] : '';
+		} elseif ( 1 !== preg_match( '/^[A-Za-z0-9_\-]{8,255}$/', $github ) ) {
+			Notices::flash( 'error', __( 'GitHub-tokenet blev ikke gemt. Brug et token på 8–255 tegn uden mellemrum.', 'forsamlingshus-billetter' ) );
+			$this->back();
+		}
+
+		if ( MailPoetBody::available() ) {
+			$newsletter_id = isset( $_POST['mailpoet_newsletter_id'] ) ? absint( wp_unslash( $_POST['mailpoet_newsletter_id'] ) ) : 0;
+		} else {
+			$newsletter_id = (int) $current['mailpoet_newsletter_id'];
+		}
+
 		$this->settings->save(
 			array(
 				'publishable_key' => $publishable,
 				'secret_key' => $secret,
 				'webhook_secret' => $webhook,
+				'github_token' => $github,
+				'mailpoet_newsletter_id' => $newsletter_id,
 			)
 		);
 		Notices::flash( 'success', __( 'Indstillingerne er gemt.', 'forsamlingshus-billetter' ) );
 		$this->back();
+	}
+
+	private function mailpoet_field( int $selected ): void {
+		if ( ! MailPoetBody::available() ) {
+			echo '<p id="fhb-mailpoet">' . esc_html__( 'MailPoet er ikke aktivt. Billetterne sendes med den indbyggede tekstmail.', 'forsamlingshus-billetter' ) . '</p>';
+			return;
+		}
+		$choices = MailPoetBody::choices();
+		echo '<select id="fhb-mailpoet" name="mailpoet_newsletter_id">';
+		echo '<option value="0">' . esc_html__( 'Indbygget tekstmail', 'forsamlingshus-billetter' ) . '</option>';
+		foreach ( $choices as $id => $label ) {
+			echo '<option value="' . esc_attr( (string) $id ) . '" ' . selected( $selected, (int) $id, false ) . '>' . esc_html( $label ) . '</option>';
+		}
+		echo '</select>';
+		echo '<p class="description">' . esc_html__( 'Den valgte MailPoet-mail er brødteksten i mailen med billetterne. PDF-filen vedhæftes stadig. I mailen kan I bruge [fhb_buyer], [fhb_event_name], [fhb_date], [fhb_time], [fhb_quantity], [fhb_amount], [fhb_order] og [fhb_remark]. [fhb_qr] viser QR-koden for den første billet.', 'forsamlingshus-billetter' ) . '</p>';
 	}
 
 	private function clean_key( string $value ): string {

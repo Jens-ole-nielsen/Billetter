@@ -110,6 +110,8 @@ $size = count( $matrix );
 check( $size >= 21 && $size === count( $matrix[0] ), 'QR matrix is square' );
 check( true === $matrix[2][2], 'quiet zone leaves a finder module dark' );
 $svg = QrCode::svg_markup( 'FHB-SAMPLE' );
+$png = QrCode::png( 'FHB-SAMPLE' );
+check( str_starts_with( $png, "\x89PNG" ), 'QR png bytes' );
 check( str_starts_with( $svg, '<svg' ), 'preview SVG' );
 check( false === str_contains( strtolower( $svg ), '<script' ), 'preview SVG has no script' );
 
@@ -211,6 +213,14 @@ check( str_contains( $orders_pdf, 'Vil gerne sidde ved scenen' ), 'orders PDF in
 
 $saturday = new DateTimeImmutable( '2026-11-14 12:00:00' );
 check( 'lørdag 14. november 2026' === Format::long_date( $saturday ), 'event date is Danish' );
+
+$html_options = new \Dompdf\Options();
+$html_options->set( 'defaultFont', 'DejaVu Sans' );
+$html_pdf = new \Dompdf\Dompdf( $html_options );
+$html_pdf->loadHtml( '<html><body><p>Billet æøå</p></body></html>', 'UTF-8' );
+$html_pdf->render();
+$html_binary = $html_pdf->output();
+check( is_string( $html_binary ) && str_starts_with( $html_binary, '%PDF' ), 'dompdf produces a PDF' );
 
 if ( $failed > 0 ) {
 	echo "\n{$failed} failed\n";

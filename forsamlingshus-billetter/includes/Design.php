@@ -34,6 +34,7 @@ final class Design {
 			'show_buyer' => 1,
 			'show_price' => 1,
 			'show_qr' => 1,
+			'elementor_template_id' => 0,
 		);
 	}
 
@@ -61,6 +62,7 @@ final class Design {
 		foreach ( array( 'show_event', 'show_date', 'show_time', 'show_buyer', 'show_price', 'show_qr' ) as $flag ) {
 			$design[ $flag ] = empty( $design[ $flag ] ) ? 0 : 1;
 		}
+		$design['elementor_template_id'] = self::template_id( $design['elementor_template_id'] ?? 0 );
 
 		return $design;
 	}
@@ -85,6 +87,25 @@ final class Design {
 		foreach ( array( 'show_event', 'show_date', 'show_time', 'show_buyer', 'show_price', 'show_qr' ) as $flag ) {
 			$design[ $flag ] = empty( $input[ $flag ] ) ? 0 : 1;
 		}
+		if ( array_key_exists( 'elementor_template_id', $input ) ) {
+			$design['elementor_template_id'] = self::template_id( $input['elementor_template_id'] );
+		} else {
+			$stored = get_option( self::OPTION, array() );
+			$design['elementor_template_id'] = self::template_id( is_array( $stored ) ? ( $stored['elementor_template_id'] ?? 0 ) : 0 );
+		}
 		update_option( self::OPTION, $design, false );
+	}
+
+	private static function template_id( mixed $value ): int {
+		$id = absint( $value );
+		if ( $id < 1 ) {
+			return 0;
+		}
+		$post = get_post( $id );
+		if ( ! $post instanceof \WP_Post || 'elementor_library' !== $post->post_type || 'trash' === $post->post_status ) {
+			return 0;
+		}
+
+		return $id;
 	}
 }

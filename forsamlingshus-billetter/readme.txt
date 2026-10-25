@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.0.0
+Stable tag: 1.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,13 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.1.0 =
+* Oversigten viser, hvor mange billetter der er solgt. Tallet er betalte billetter.
+* En Elementor-skabelon kan bruges som billet, når Elementor er aktivt. Ellers bruges det indbyggede design.
+* En MailPoet-mail kan bruges som tekst i billetmailen. PDF-filen vedhæftes stadig. Ellers bruges tekstmailen.
+* Opdateringer kan hentes fra GitHub-udgivelser. Et privat arkiv kræver et token under Indstillinger.
+* På en betalt ordre kan billet-PDF'en åbnes, og billetmailen kan sendes igen.
 
 = 1.0.0 =
 * Første version med arrangementer, Stripe Checkout, faktura, PDF-billetter, indtjekning og mail til købere.

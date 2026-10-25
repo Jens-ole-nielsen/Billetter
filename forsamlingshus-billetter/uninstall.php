@@ -34,6 +34,7 @@ delete_option( 'fhb_db_version' );
 delete_option( 'fhb_settings' );
 delete_option( 'fhb_design' );
 delete_option( 'fhb_caps_version' );
+delete_option( 'fhb_update_check' );
 
 Capabilities::remove();
 
