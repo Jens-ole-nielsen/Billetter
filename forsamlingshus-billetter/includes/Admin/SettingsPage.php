@@ -98,7 +98,7 @@ final class SettingsPage {
 							<?php if ( '' !== $values['github_token'] ) : ?>
 								<label><input type="checkbox" name="clear_github" value="1"> <?php esc_html_e( 'Slet det gemte token', 'forsamlingshus-billetter' ); ?></label>
 							<?php endif; ?>
-							<p class="description"><?php esc_html_e( 'Opdateringer kommer fra GitHub-udgivelser på Jens-ole-nielsen/Events. Udgivelsen skal indeholde filen forsamlingshus-billetter.zip. Et privat arkiv kræver et token med læseadgang. Lad feltet stå tomt for at beholde det gemte token.', 'forsamlingshus-billetter' ); ?></p>
+							<p class="description"><?php esc_html_e( 'Opdateringer kommer fra GitHub-udgivelser på Jens-ole-nielsen/Billetter. Udgivelsen skal indeholde filen forsamlingshus-billetter.zip. Et offentligt arkiv kan læses uden token. Et privat arkiv kræver et token med læseadgang. Lad feltet stå tomt for at beholde det gemte token.', 'forsamlingshus-billetter' ); ?></p>
 						</td>
 					</tr>
 				</table>

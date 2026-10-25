@@ -120,7 +120,7 @@ Hvis MailPoet ikke er aktivt, eller mailen ikke kan laves, sendes den indbyggede
 
 ## Opdateringer
 
-Pluginnet kan vise en almindelig opdatering under **Plugins**. Kilden er GitHub-udgivelser på [Jens-ole-nielsen/Events](https://github.com/Jens-ole-nielsen/Events).
+Pluginnet kan vise en almindelig opdatering under **Plugins**. Kilden er GitHub-udgivelser på [Jens-ole-nielsen/Billetter](https://github.com/Jens-ole-nielsen/Billetter).
 
 Sådan udgives en ny version:
 
@@ -132,7 +132,7 @@ Sådan udgives en ny version:
 
 WordPress viser opdateringen, når versionsnummeret i udgivelsen er højere end det, der er installeret.
 
-Arkivet er privat. Uden et token kan siden ikke læse udgivelserne. Under **Billetter → Indstillinger** gemmes et GitHub-token med læseadgang. Feltet er en adgangskode: et tomt felt beholder det gemte token, og afkrydsningen sletter det. Tokenet ligger kun i WordPress og ikke i plugin-filerne.
+Arkivet er offentligt, så siden kan læse udgivelserne uden et token. Hvis arkivet er privat, gemmes et GitHub-token med læseadgang under **Billetter → Indstillinger**. Feltet er en adgangskode: et tomt felt beholder det gemte token, og afkrydsningen sletter det. Tokenet ligger kun i WordPress og ikke i plugin-filerne.
 
 ## Bevidste grænser
 

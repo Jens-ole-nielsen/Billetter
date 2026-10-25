@@ -40,7 +40,7 @@ final class Updates {
 
 	private function attach(): void {
 		$checker = PucFactory::buildUpdateChecker(
-			'https://github.com/Jens-ole-nielsen/Events',
+			'https://github.com/Jens-ole-nielsen/Billetter',
 			FHB_FILE,
 			'forsamlingshus-billetter',
 			12,

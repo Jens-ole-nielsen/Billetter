@@ -56,7 +56,7 @@ Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura 
 * Oversigten viser, hvor mange billetter der er solgt. Tallet er betalte billetter.
 * En Elementor-skabelon kan bruges som billet, når Elementor er aktivt. Ellers bruges det indbyggede design.
 * En MailPoet-mail kan bruges som tekst i billetmailen. PDF-filen vedhæftes stadig. Ellers bruges tekstmailen.
-* Opdateringer kan hentes fra GitHub-udgivelser. Et privat arkiv kræver et token under Indstillinger.
+* Opdateringer kan hentes fra GitHub-udgivelser på Jens-ole-nielsen/Billetter. Et offentligt arkiv læses uden token. Et privat arkiv kræver et token under Indstillinger.
 * På en betalt ordre kan billet-PDF'en åbnes, og billetmailen kan sendes igen.
 
 = 1.0.0 =
