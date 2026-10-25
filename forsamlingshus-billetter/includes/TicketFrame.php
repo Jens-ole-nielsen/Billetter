@@ -266,6 +266,114 @@ final class TicketFrame {
 	}
 
 	/**
+	 * Fractions for the fixed ticket sheet. The preview reads the same numbers.
+	 *
+	 * photoMax, gap, marginBottom, logoH and logoGap are per mille of the page
+	 * height. marginX, columnGap and qrW are per mille of the page width.
+	 *
+	 * @return array{photoMax:int,gap:int,marginX:int,marginBottom:int,columnGap:int,qrW:int,logoH:int,logoGap:int}
+	 */
+	public static function sheet_spec(): array {
+		return array(
+			'photoMax' => 420,
+			'gap' => 22,
+			'marginX' => 48,
+			'marginBottom' => 36,
+			'columnGap' => 28,
+			'qrW' => 400,
+			'logoH' => 100,
+			'logoGap' => 12,
+		);
+	}
+
+	/**
+	 * The whole poster sits in the top band. Text and the QR card sit on the
+	 * paper under it. A saved drag or zoom is not used: the example and the
+	 * PDF both draw this sheet, so the picture cannot depend on which renderer
+	 * crops the file.
+	 *
+	 * @param list<string> $fields Shown blocks, in order. Heading first.
+	 * @return array{photo:array{x:float,y:float,w:float,h:float},blocks:array<string,array{x:float,y:float,w:float,h:float}>}
+	 */
+	public static function sheet( int $src_w, int $src_h, float $page_w, float $page_h, array $fields, bool $logo ): array {
+		$spec = self::sheet_spec();
+		$max_h = $page_h * $spec['photoMax'] / 1000;
+		if ( $src_w < 1 || $src_h < 1 || $page_w <= 0.0 || $page_h <= 0.0 ) {
+			$photo = array(
+				'x' => 0.0,
+				'y' => 0.0,
+				'w' => 0.0,
+				'h' => 0.0,
+			);
+			$content_top = $page_h * $spec['gap'] / 1000;
+		} else {
+			$fit = min( $page_w / $src_w, $max_h / $src_h );
+			$draw_w = $src_w * $fit;
+			$draw_h = $src_h * $fit;
+			$photo = array(
+				'x' => ( $page_w - $draw_w ) / 2,
+				'y' => 0.0,
+				'w' => $draw_w,
+				'h' => $draw_h,
+			);
+			$content_top = $draw_h + ( $page_h * $spec['gap'] / 1000 );
+		}
+
+		$margin_x = $page_w * $spec['marginX'] / 1000;
+		$bottom = $page_h - ( $page_h * $spec['marginBottom'] / 1000 );
+		$qr_w = $page_w * $spec['qrW'] / 1000;
+		$gap_x = $page_w * $spec['columnGap'] / 1000;
+		$qr_x = $page_w - $margin_x - $qr_w;
+		$fields_w = max( 36.0, $qr_x - $gap_x - $margin_x );
+		$logo_h = 0.0;
+		if ( $logo ) {
+			$logo_h = min( $page_h * $spec['logoH'] / 1000, ( $bottom - $content_top ) * 0.22 );
+		}
+		$blocks = array();
+		if ( $logo_h > 0.0 ) {
+			$blocks['logo'] = array(
+				'x' => $qr_x,
+				'y' => $content_top,
+				'w' => $qr_w,
+				'h' => $logo_h,
+			);
+		}
+		$qr_y = $content_top + ( $logo_h > 0.0 ? $logo_h + ( $page_h * $spec['logoGap'] / 1000 ) : 0.0 );
+		$blocks['qr'] = array(
+			'x' => $qr_x,
+			'y' => $qr_y,
+			'w' => $qr_w,
+			'h' => max( 36.0, $bottom - $qr_y ),
+		);
+
+		$names = array();
+		foreach ( $fields as $name ) {
+			if ( is_string( $name ) && '' !== $name ) {
+				$names[] = $name;
+			}
+		}
+		if ( array() === $names ) {
+			$names[] = 'heading';
+		}
+		$slot = ( $bottom - $content_top ) / count( $names );
+		$y = $content_top;
+		foreach ( $names as $name ) {
+			$blocks[ $name ] = array(
+				'x' => $margin_x,
+				'y' => $y,
+				'w' => $fields_w,
+				'h' => $slot,
+			);
+			$y += $slot;
+		}
+
+		return array(
+			'photo' => $photo,
+			'blocks' => $blocks,
+		);
+	}
+
+	/**
 	 * Default block positions, per mille from the top left.
 	 *
 	 * @return array<string, array{x:int,y:int}>

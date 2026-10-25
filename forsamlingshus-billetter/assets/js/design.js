@@ -4,6 +4,22 @@
 		return;
 	}
 
+	var spec = {
+		photoMax: 420,
+		gap: 22,
+		marginX: 48,
+		marginBottom: 36,
+		columnGap: 28,
+		qrW: 400,
+		logoH: 100,
+		logoGap: 12
+	};
+	try {
+		spec = Object.assign(spec, JSON.parse(preview.getAttribute("data-sheet") || "{}"));
+	} catch (error) {
+		spec = spec;
+	}
+
 	function sync() {
 		var heading = document.getElementById("fhb-heading");
 		var headingOut = preview.querySelector("[data-fhb-preview='heading']");
@@ -25,22 +41,33 @@
 		if (qrBlock && qrField) {
 			qrBlock.classList.toggle("is-plain", !qrField.checked);
 		}
+		applyInk();
 	}
 
-	function padsOn() {
-		var choice = document.getElementById("fhb-pad-blocks");
-		var value = choice ? choice.value : "auto";
-		if (value === "0") {
-			return false;
+	function luma(hex) {
+		var n = parseInt(String(hex).replace("#", ""), 16);
+		if (!n && n !== 0) {
+			return 0;
 		}
-		if (value === "1") {
-			return true;
-		}
-		return preview.classList.contains("has-photo");
+		var r = (n >> 16) & 255;
+		var g = (n >> 8) & 255;
+		var b = n & 255;
+		return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255;
 	}
 
-	function syncPads() {
-		preview.classList.toggle("has-pad", padsOn());
+	function onSurface(ink, surface) {
+		if (Math.abs(luma(ink) - luma(surface)) >= 0.45) {
+			return ink;
+		}
+		return luma(surface) > 0.55 ? "#1C1C1C" : "#FFFFFF";
+	}
+
+	function applyInk() {
+		var primary = preview.style.getPropertyValue("--fhb-primary") || "#1F4B3A";
+		var text = preview.style.getPropertyValue("--fhb-text") || "#1C1C1C";
+		var paper = preview.style.getPropertyValue("--fhb-bg") || "#FFFBF5";
+		preview.style.setProperty("--fhb-label", onSurface(primary.trim(), paper.trim()));
+		preview.style.setProperty("--fhb-value", onSurface(text.trim(), paper.trim()));
 	}
 
 	function syncSize() {
@@ -56,24 +83,101 @@
 		if (ratio) {
 			preview.style.aspectRatio = ratio;
 		}
-		var hint = document.getElementById("fhb-size-hint");
-		var label = option.getAttribute("data-label");
-		if (hint && label) {
-			hint.textContent = "Billedet skal være " + label + ".";
+	}
+
+	// Same arithmetic as TicketFrame::sheet().
+	function sheet(srcW, srcH, pageW, pageH, fields, logo) {
+		var maxH = (pageH * spec.photoMax) / 1000;
+		var photo;
+		var contentTop;
+		if (!srcW || !srcH) {
+			photo = { x: 0, y: 0, w: 0, h: 0 };
+			contentTop = (pageH * spec.gap) / 1000;
+		} else {
+			var fit = Math.min(pageW / srcW, maxH / srcH);
+			var dw = srcW * fit;
+			var dh = srcH * fit;
+			photo = { x: (pageW - dw) / 2, y: 0, w: dw, h: dh };
+			contentTop = dh + (pageH * spec.gap) / 1000;
 		}
+		var marginX = (pageW * spec.marginX) / 1000;
+		var bottom = pageH - (pageH * spec.marginBottom) / 1000;
+		var qrW = (pageW * spec.qrW) / 1000;
+		var gapX = (pageW * spec.columnGap) / 1000;
+		var qrX = pageW - marginX - qrW;
+		var fieldsW = Math.max(36, qrX - gapX - marginX);
+		var logoH = 0;
+		if (logo) {
+			logoH = Math.min((pageH * spec.logoH) / 1000, (bottom - contentTop) * 0.22);
+		}
+		var blocks = {};
+		if (logoH > 0) {
+			blocks.logo = { x: qrX, y: contentTop, w: qrW, h: logoH };
+		}
+		var qrY = contentTop + (logoH > 0 ? logoH + (pageH * spec.logoGap) / 1000 : 0);
+		blocks.qr = { x: qrX, y: qrY, w: qrW, h: Math.max(36, bottom - qrY) };
+		var names = fields.length ? fields : ["heading"];
+		var slot = (bottom - contentTop) / names.length;
+		names.forEach(function (name, index) {
+			blocks[name] = { x: marginX, y: contentTop + index * slot, w: fieldsW, h: slot };
+		});
+		return { photo: photo, blocks: blocks };
+	}
+
+	function shownFields() {
+		var names = [];
+		["heading", "event", "date", "time", "buyer", "price"].forEach(function (name) {
+			var el = preview.querySelector("[data-block='" + name + "']");
+			if (el && !el.hidden) {
+				names.push(name);
+			}
+		});
+		return names;
+	}
+
+	function placeBox(el, box, pageW, pageH) {
+		if (!el || !box) {
+			return;
+		}
+		el.style.left = (box.x / pageW) * 100 + "%";
+		el.style.top = (box.y / pageH) * 100 + "%";
+		el.style.width = (box.w / pageW) * 100 + "%";
+		el.style.height = (box.h / pageH) * 100 + "%";
+	}
+
+	function layout() {
+		var pageW = preview.clientWidth;
+		var pageH = preview.clientHeight;
+		if (pageW < 1 || pageH < 1) {
+			return;
+		}
+		var photo = document.getElementById("fhb-ticket-photo");
+		var srcW = 0;
+		var srcH = 0;
+		if (photo && !photo.hidden && photo.naturalWidth && photo.naturalHeight) {
+			srcW = photo.naturalWidth;
+			srcH = photo.naturalHeight;
+		}
+		var logo = preview.querySelector("[data-block='logo']");
+		var placed = sheet(srcW, srcH, pageW, pageH, shownFields(), logo && !logo.hidden);
+		if (photo && srcW) {
+			placeBox(photo, placed.photo, pageW, pageH);
+		}
+		Object.keys(placed.blocks).forEach(function (name) {
+			placeBox(preview.querySelector("[data-block='" + name + "']"), placed.blocks[name], pageW, pageH);
+		});
 	}
 
 	document.addEventListener("input", function () {
 		sync();
-		syncPads();
+		layout();
 	});
 	document.addEventListener("change", function (event) {
 		sync();
-		syncPads();
 		if (event.target && event.target.id === "fhb-ticket-size") {
 			syncSize();
-			window.requestAnimationFrame(layoutPhoto);
 		}
+		window.requestAnimationFrame(layout);
 	});
 	document.addEventListener("fhb-media", function (event) {
 		if (!event.detail) {
@@ -91,6 +195,7 @@
 				logo.removeAttribute("src");
 				logo.hidden = true;
 			}
+			layout();
 			return;
 		}
 		if (event.detail.target === "fhb-background-id") {
@@ -106,160 +211,20 @@
 				photo.removeAttribute("src");
 				photo.hidden = true;
 				preview.classList.remove("has-photo");
+				layout();
 			}
-			syncPads();
-			layoutPhoto();
 		}
 	});
-
-	function layoutPhoto() {
-		var photo = document.getElementById("fhb-ticket-photo");
-		var scaleInput = document.getElementById("fhb-bg-scale");
-		var xInput = document.getElementById("fhb-bg-x");
-		var yInput = document.getElementById("fhb-bg-y");
-		var out = document.getElementById("fhb-bg-scale-value");
-		if (scaleInput && out) {
-			out.textContent = Math.round(Number(scaleInput.value) / 10) + " %";
-		}
-		if (!photo || photo.hidden || !photo.naturalWidth || !photo.naturalHeight) {
-			return;
-		}
-		var bounds = preview.getBoundingClientRect();
-		if (bounds.width < 1 || bounds.height < 1) {
-			return;
-		}
-		var scale = scaleInput ? Number(scaleInput.value) : 1000;
-		var ox = xInput ? Number(xInput.value) : 0;
-		var oy = yInput ? Number(yInput.value) : 0;
-		if (!scale) {
-			scale = 1000;
-		}
-		// Same fit as TicketFrame::photo_frame: 1000 shows the whole photo.
-		var fit = Math.min(bounds.width / photo.naturalWidth, bounds.height / photo.naturalHeight);
-		var w = photo.naturalWidth * fit * (scale / 1000);
-		var h = photo.naturalHeight * fit * (scale / 1000);
-		var x = (bounds.width - w) / 2 + (bounds.width * ox) / 1000;
-		var y = (bounds.height * oy) / 1000;
-		photo.style.setProperty("width", w + "px", "important");
-		photo.style.setProperty("height", h + "px", "important");
-		photo.style.setProperty("max-width", "none", "important");
-		photo.style.setProperty("max-height", "none", "important");
-		photo.style.setProperty("left", x + "px", "important");
-		photo.style.setProperty("top", y + "px", "important");
-	}
 
 	var photoNode = document.getElementById("fhb-ticket-photo");
 	if (photoNode) {
-		photoNode.addEventListener("load", layoutPhoto);
+		photoNode.addEventListener("load", layout);
+		if (photoNode.complete) {
+			layout();
+		}
 	}
-	var zoom = document.getElementById("fhb-bg-scale");
-	if (zoom) {
-		zoom.addEventListener("input", layoutPhoto);
-	}
-	window.addEventListener("resize", layoutPhoto);
-
-	preview.addEventListener("pointerdown", function (event) {
-		if (event.button !== undefined && event.button !== 0) {
-			return;
-		}
-		if (event.target && event.target.closest && event.target.closest("[data-block]")) {
-			return;
-		}
-		if (!preview.classList.contains("has-photo")) {
-			return;
-		}
-		var xInput = document.getElementById("fhb-bg-x");
-		var yInput = document.getElementById("fhb-bg-y");
-		if (!xInput || !yInput) {
-			return;
-		}
-		event.preventDefault();
-		var startX = event.clientX;
-		var startY = event.clientY;
-		var originX = Number(xInput.value) || 0;
-		var originY = Number(yInput.value) || 0;
-		preview.classList.add("is-moving-photo");
-
-		function move(pointer) {
-			var bounds = preview.getBoundingClientRect();
-			if (bounds.width < 1 || bounds.height < 1) {
-				return;
-			}
-			var px = Math.round(originX + ((pointer.clientX - startX) / bounds.width) * 1000);
-			var py = Math.round(originY + ((pointer.clientY - startY) / bounds.height) * 1000);
-			px = Math.max(-2000, Math.min(2000, px));
-			py = Math.max(-2000, Math.min(2000, py));
-			xInput.value = String(px);
-			yInput.value = String(py);
-			layoutPhoto();
-		}
-
-		function end() {
-			preview.classList.remove("is-moving-photo");
-			preview.removeEventListener("pointermove", move);
-			preview.removeEventListener("pointerup", end);
-			preview.removeEventListener("pointercancel", end);
-		}
-
-		preview.addEventListener("pointermove", move);
-		preview.addEventListener("pointerup", end);
-		preview.addEventListener("pointercancel", end);
-		if (preview.setPointerCapture) {
-			preview.setPointerCapture(event.pointerId);
-		}
-	});
-
-	preview.querySelectorAll("[data-block]").forEach(function (block) {
-		block.addEventListener("pointerdown", function (event) {
-			if (event.button !== undefined && event.button !== 0) {
-				return;
-			}
-			event.preventDefault();
-			var name = block.getAttribute("data-block");
-			var inputX = document.getElementById("fhb-block-" + name + "-x");
-			var inputY = document.getElementById("fhb-block-" + name + "-y");
-			var offsetX = event.clientX - block.getBoundingClientRect().left;
-			var offsetY = event.clientY - block.getBoundingClientRect().top;
-			block.classList.add("is-dragging");
-
-			function move(pointer) {
-				var bounds = preview.getBoundingClientRect();
-				var x = pointer.clientX - bounds.left - offsetX;
-				var y = pointer.clientY - bounds.top - offsetY;
-				var maxX = Math.max(0, bounds.width - block.offsetWidth);
-				var maxY = Math.max(0, bounds.height - block.offsetHeight);
-				x = Math.max(0, Math.min(maxX, x));
-				y = Math.max(0, Math.min(maxY, y));
-				var px = bounds.width > 0 ? Math.round((x / bounds.width) * 1000) : 0;
-				var py = bounds.height > 0 ? Math.round((y / bounds.height) * 1000) : 0;
-				block.style.left = px / 10 + "%";
-				block.style.top = py / 10 + "%";
-				if (inputX) {
-					inputX.value = String(px);
-				}
-				if (inputY) {
-					inputY.value = String(py);
-				}
-			}
-
-			function end() {
-				block.classList.remove("is-dragging");
-				block.removeEventListener("pointermove", move);
-				block.removeEventListener("pointerup", end);
-				block.removeEventListener("pointercancel", end);
-			}
-
-			block.addEventListener("pointermove", move);
-			block.addEventListener("pointerup", end);
-			block.addEventListener("pointercancel", end);
-			if (block.setPointerCapture) {
-				block.setPointerCapture(event.pointerId);
-			}
-		});
-	});
-
+	window.addEventListener("resize", layout);
 	sync();
-	syncPads();
 	syncSize();
-	layoutPhoto();
+	layout();
 })();

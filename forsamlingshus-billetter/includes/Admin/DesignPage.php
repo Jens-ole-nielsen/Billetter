@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Forsamlingshus\Billetter\Admin;
 
 use Forsamlingshus\Billetter\Capabilities;
+use Forsamlingshus\Billetter\Color;
 use Forsamlingshus\Billetter\Design;
 use Forsamlingshus\Billetter\QrCode;
 use Forsamlingshus\Billetter\TicketFrame;
@@ -60,15 +61,14 @@ final class DesignPage {
 		}
 		$design = $this->design->get();
 		$logo = (int) $design['logo_id'] ? wp_get_attachment_image_url( (int) $design['logo_id'], 'medium' ) : '';
-		$background = (int) $design['background_id'] ? wp_get_attachment_image_url( (int) $design['background_id'], 'large' ) : '';
+		$background = (int) $design['background_id'] ? wp_get_attachment_image_url( (int) $design['background_id'], 'full' ) : '';
 		$has_photo = is_string( $background ) && '' !== $background;
-		$pads = TicketFrame::pads_content( $design['pad_blocks'] ?? 'auto', $has_photo );
 		$size = TicketFrame::size( (string) $design['ticket_size'] );
 		?>
 		<div class="wrap fhb-design-wrap">
 			<h1><?php esc_html_e( 'Billetdesign', 'forsamlingshus-billetter' ); ?></h1>
-			<p><?php esc_html_e( 'Vælg baggrund, størrelse, logo og hvilke felter der skal med. Træk felterne på eksemplet. Gem design, så PDF-billetten bruger de samme placeringer.', 'forsamlingshus-billetter' ); ?></p>
-			<p class="description"><?php esc_html_e( 'Har arrangementet en plakat eller sit eget billetbillede, bruges det i stedet for baggrunden her, med samme zoom og placering. Uden billede er billetten ensfarvet. QR-koden står altid på en hvid flade, så den kan scannes.', 'forsamlingshus-billetter' ); ?></p>
+			<p><?php esc_html_e( 'Eksemplet er billetten. PDF-filen bruger den samme opsætning.', 'forsamlingshus-billetter' ); ?></p>
+			<p class="description"><?php esc_html_e( 'Har arrangementet en plakat eller sit eget billetbillede, bruges det i stedet for baggrunden her. Hele billedet ligger foroven. Tekst og QR-kode står under det på den lyse bund. QR-koden står altid på en hvid flade, så den kan scannes. Uden billede er billetten ensfarvet.', 'forsamlingshus-billetter' ); ?></p>
 			<div class="fhb-design-layout">
 				<form method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>">
 					<?php wp_nonce_field( 'fhb_save_design' ); ?>
@@ -91,17 +91,7 @@ final class DesignPage {
 										><?php echo esc_html( $choice['label'] ); ?></option>
 									<?php endforeach; ?>
 								</select>
-								<p id="fhb-size-hint" class="description">
-									<?php
-									echo esc_html(
-										sprintf(
-											/* translators: %s: pixel size and orientation, for example 1240 × 1754 pixels, stående */
-											__( 'Billedet skal være %s.', 'forsamlingshus-billetter' ),
-											TicketFrame::fit_label( $size['key'] )
-										)
-									);
-									?>
-								</p>
+								<p id="fhb-size-hint" class="description"><?php esc_html_e( 'Hele billedet vises foroven. Teksten står under det.', 'forsamlingshus-billetter' ); ?></p>
 							</td>
 						</tr>
 						<tr>
@@ -115,19 +105,7 @@ final class DesignPage {
 								</div>
 								<button type="button" class="button fhb-media-pick" data-target="fhb-background-id" data-preview="fhb-background-preview"><?php esc_html_e( 'Vælg billede', 'forsamlingshus-billetter' ); ?></button>
 								<button type="button" class="button fhb-media-clear" data-target="fhb-background-id" data-preview="fhb-background-preview"><?php esc_html_e( 'Fjern', 'forsamlingshus-billetter' ); ?></button>
-								<?php $this->photo_controls( $design ); ?>
-								<p class="description"><?php esc_html_e( 'Bruges når arrangementet ikke har en plakat eller et eget billetbillede.', 'forsamlingshus-billetter' ); ?></p>
-							</td>
-						</tr>
-						<tr>
-							<th scope="row"><label for="fhb-pad-blocks"><?php esc_html_e( 'Lys flade bag tekst og logo', 'forsamlingshus-billetter' ); ?></label></th>
-							<td>
-								<select id="fhb-pad-blocks" name="pad_blocks">
-									<option value="auto" <?php selected( (string) $design['pad_blocks'], 'auto' ); ?>><?php esc_html_e( 'Når der er et billede', 'forsamlingshus-billetter' ); ?></option>
-									<option value="1" <?php selected( (string) $design['pad_blocks'], '1' ); ?>><?php esc_html_e( 'Altid', 'forsamlingshus-billetter' ); ?></option>
-									<option value="0" <?php selected( (string) $design['pad_blocks'], '0' ); ?>><?php esc_html_e( 'Nej', 'forsamlingshus-billetter' ); ?></option>
-								</select>
-								<p class="description"><?php esc_html_e( 'Tekst og logo kan stå på en hvid flade, så de kan læses oven på et billede. Som standard er fladen slået til, når billetten har et billede. QR-koden har altid hvid baggrund, og det kan ikke slås fra.', 'forsamlingshus-billetter' ); ?></p>
+								<p class="description"><?php esc_html_e( 'Bruges når arrangementet ikke har en plakat eller et eget billetbillede. Hele billedet vises foroven.', 'forsamlingshus-billetter' ); ?></p>
 							</td>
 						</tr>
 						<tr>
@@ -178,13 +156,12 @@ final class DesignPage {
 							</td>
 						</tr>
 					</table>
-					<?php $this->position_inputs( $design ); ?>
 					<?php submit_button( __( 'Gem design', 'forsamlingshus-billetter' ) ); ?>
 				</form>
 				<div>
 					<h2><?php esc_html_e( 'Eksempel', 'forsamlingshus-billetter' ); ?></h2>
-					<p class="description"><?php esc_html_e( 'Træk billedet for at flytte det. Træk et felt, logoet eller QR-koden. Slip, og gem design.', 'forsamlingshus-billetter' ); ?></p>
-					<article id="fhb-ticket-preview" class="fhb-ticket-preview<?php echo $has_photo ? ' has-photo' : ''; ?><?php echo $pads ? ' has-pad' : ''; ?>" style="<?php echo esc_attr( $this->preview_style( $design ) ); ?>">
+					<p class="description"><?php esc_html_e( 'Det, I ser her, er det, der printes.', 'forsamlingshus-billetter' ); ?></p>
+					<article id="fhb-ticket-preview" class="fhb-ticket-preview is-sheet<?php echo $has_photo ? ' has-photo' : ''; ?>" data-sheet="<?php echo esc_attr( (string) wp_json_encode( TicketFrame::sheet_spec() ) ); ?>" style="<?php echo esc_attr( $this->preview_style( $design ) ); ?>">
 						<?php $this->preview_photo( is_string( $background ) ? $background : '' ); ?>
 						<?php $this->preview_blocks( $design, is_string( $logo ) ? $logo : '' ); ?>
 					</article>
@@ -194,41 +171,12 @@ final class DesignPage {
 		<?php
 	}
 
-	/**
-	 * @param array<string, int|string> $design
-	 */
-	private function photo_controls( array $design ): void {
-		$scale = TicketFrame::photo_scale( $design['bg_scale'] ?? 1000 );
-		$x = TicketFrame::photo_offset( $design['bg_x'] ?? 0 );
-		$y = TicketFrame::photo_offset( $design['bg_y'] ?? 0 );
-		echo '<input type="hidden" name="bg_x" id="fhb-bg-x" value="' . esc_attr( (string) $x ) . '">';
-		echo '<input type="hidden" name="bg_y" id="fhb-bg-y" value="' . esc_attr( (string) $y ) . '">';
-		echo '<p class="fhb-zoom">';
-		echo '<label for="fhb-bg-scale">' . esc_html__( 'Zoom', 'forsamlingshus-billetter' ) . '</label>';
-		echo '<input type="range" id="fhb-bg-scale" name="bg_scale" min="250" max="4000" step="10" value="' . esc_attr( (string) $scale ) . '">';
-		echo '<output id="fhb-bg-scale-value" for="fhb-bg-scale">' . esc_html( (string) (int) round( $scale / 10 ) ) . ' %</output>';
-		echo '</p>';
-		echo '<p class="description">' . esc_html__( 'Træk billedet i eksemplet for at flytte det.', 'forsamlingshus-billetter' ) . '</p>';
-	}
-
 	private function preview_photo( string $background ): void {
 		if ( '' === $background ) {
 			echo '<img id="fhb-ticket-photo" class="fhb-ticket-photo" alt="" draggable="false" hidden>';
 			return;
 		}
 		echo '<img id="fhb-ticket-photo" class="fhb-ticket-photo" alt="" draggable="false" src="' . esc_url( $background ) . '">';
-	}
-
-	/**
-	 * @param array<string, int|string> $design
-	 */
-	private function position_inputs( array $design ): void {
-		foreach ( TicketFrame::default_blocks() as $name => $pos ) {
-			$x = (int) ( $design[ 'block_' . $name . '_x' ] ?? $pos['x'] );
-			$y = (int) ( $design[ 'block_' . $name . '_y' ] ?? $pos['y'] );
-			echo '<input type="hidden" name="block_' . esc_attr( $name ) . '_x" id="fhb-block-' . esc_attr( $name ) . '-x" value="' . esc_attr( (string) $x ) . '">';
-			echo '<input type="hidden" name="block_' . esc_attr( $name ) . '_y" id="fhb-block-' . esc_attr( $name ) . '-y" value="' . esc_attr( (string) $y ) . '">';
-		}
 	}
 
 	/**
@@ -243,7 +191,7 @@ final class DesignPage {
 			'buyer' => 'show_buyer',
 			'price' => 'show_price',
 		);
-		echo '<strong class="fhb-block fhb-ticket-heading" data-block="heading" data-fhb-preview="heading" style="' . esc_attr( $this->block_style( $design, 'heading' ) ) . '">' . esc_html( (string) $design['heading'] ) . '</strong>';
+		echo '<strong class="fhb-block fhb-ticket-heading" data-block="heading" data-fhb-preview="heading">' . esc_html( (string) $design['heading'] ) . '</strong>';
 		$rows = array(
 			'event' => array( __( 'Arrangement', 'forsamlingshus-billetter' ), __( 'Fest i forsamlingshuset', 'forsamlingshus-billetter' ) ),
 			'date' => array( __( 'Dato', 'forsamlingshus-billetter' ), __( 'lørdag 14. juni 2026', 'forsamlingshus-billetter' ) ),
@@ -253,30 +201,17 @@ final class DesignPage {
 		);
 		foreach ( $rows as $name => $pair ) {
 			$hidden = empty( $design[ $blocks[ $name ] ] ) ? ' hidden' : '';
-			echo '<p class="fhb-block" data-block="' . esc_attr( $name ) . '" data-fhb-row="' . esc_attr( $blocks[ $name ] ) . '" style="' . esc_attr( $this->block_style( $design, $name ) ) . '"' . $hidden . '>';
+			echo '<p class="fhb-block" data-block="' . esc_attr( $name ) . '" data-fhb-row="' . esc_attr( $blocks[ $name ] ) . '"' . $hidden . '>';
 			echo '<span>' . esc_html( $pair[0] ) . '</span><strong>' . esc_html( $pair[1] ) . '</strong></p>';
 		}
 		$qr_on = ! empty( $design['show_qr'] );
 		$qr_hidden = $qr_on ? '' : ' hidden';
-		echo '<div class="fhb-block fhb-block-qr' . ( $qr_on ? '' : ' is-plain' ) . '" data-block="qr" style="' . esc_attr( $this->block_style( $design, 'qr' ) ) . '">';
+		echo '<div class="fhb-block fhb-block-qr' . ( $qr_on ? '' : ' is-plain' ) . '" data-block="qr">';
 		echo '<div data-fhb-row="show_qr" class="fhb-ticket-qr"' . $qr_hidden . '>' . $this->sample_qr() . '</div>';
-		echo '<p class="fhb-ticket-code">' . esc_html__( 'Billet 1 af 2', 'forsamlingshus-billetter' ) . '<br><code>0123 4567 89ab cdef</code><br><code>0123 4567 89ab cdef</code><br>' . esc_html__( 'Vis koden ved indgangen', 'forsamlingshus-billetter' ) . '</p>';
+		echo '<p class="fhb-ticket-code"><span>' . esc_html__( 'Billet 1 af 2', 'forsamlingshus-billetter' ) . '</span><code>0123 4567 89ab cdef 0123 4567 89ab cdef</code><span>FHB-00012</span><span>' . esc_html__( 'Vis koden ved indgangen', 'forsamlingshus-billetter' ) . '</span></p>';
 		echo '</div>';
 		$logo_attr = '' !== $logo ? ' src="' . esc_url( $logo ) . '"' : ' hidden';
-		echo '<img class="fhb-block fhb-ticket-logo" data-block="logo" data-fhb-preview="logo" alt="" draggable="false" style="' . esc_attr( $this->block_style( $design, 'logo' ) ) . '"' . $logo_attr . '>';
-	}
-
-	/**
-	 * @param array<string, int|string> $design
-	 */
-	private function block_style( array $design, string $name ): string {
-		$pos = TicketFrame::default_blocks()[ $name ];
-		$x = (int) ( $design[ 'block_' . $name . '_x' ] ?? $pos['x'] );
-		$y = (int) ( $design[ 'block_' . $name . '_y' ] ?? $pos['y'] );
-		$span = TicketFrame::block_span( $name );
-
-		return 'left:' . $this->css_num( $x / 10 ) . '%;top:' . $this->css_num( $y / 10 )
-			. '%;width:' . $this->css_num( $span['w'] / 10 ) . '%;height:' . $this->css_num( $span['h'] / 10 ) . '%;';
+		echo '<img class="fhb-block fhb-ticket-logo" data-block="logo" data-fhb-preview="logo" alt="" draggable="false"' . $logo_attr . '>';
 	}
 
 	private function css_num( float $number ): string {
@@ -297,15 +232,17 @@ final class DesignPage {
 	/**
 	 * @param array<string, int|string> $design
 	 */
-	/**
-	 * @param array<string, int|string> $design
-	 */
 	private function preview_style( array $design ): string {
 		$size = TicketFrame::size( (string) $design['ticket_size'] );
+		$paper = Color::rgb( (string) $design['color_background'], array( 255, 251, 245 ) );
+		$label = Color::on_surface( Color::rgb( (string) $design['color_primary'], array( 31, 75, 58 ) ), $paper );
+		$value = Color::on_surface( Color::rgb( (string) $design['color_text'], array( 28, 28, 28 ) ), $paper );
 
 		return '--fhb-primary:' . (string) $design['color_primary']
 			. ';--fhb-text:' . (string) $design['color_text']
 			. ';--fhb-bg:' . (string) $design['color_background']
+			. ';--fhb-label:' . Color::hex( $label )
+			. ';--fhb-value:' . Color::hex( $value )
 			. ';aspect-ratio:' . $this->css_num( $size['w'] ) . ' / ' . $this->css_num( $size['h'] ) . ';';
 	}
 

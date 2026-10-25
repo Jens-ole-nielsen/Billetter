@@ -16,7 +16,9 @@
 				});
 				frame.on("select", function () {
 					var attachment = frame.state().get("selection").first().toJSON();
-					var url = (attachment.sizes && attachment.sizes.medium && attachment.sizes.medium.url) || attachment.url;
+					var full = attachment.url || "";
+					var medium = (attachment.sizes && attachment.sizes.medium && attachment.sizes.medium.url) || full;
+					var url = button.getAttribute("data-target") === "fhb-background-id" ? full : medium;
 					if (target) {
 						target.value = String(attachment.id);
 					}

@@ -135,7 +135,7 @@ final class EventPostType {
 						<button type="button" class="button fhb-media-pick" data-target="fhb-ticket-image-id" data-preview="fhb-ticket-image-preview"><?php esc_html_e( 'Vælg billede', 'forsamlingshus-billetter' ); ?></button>
 						<button type="button" class="button fhb-media-clear" data-target="fhb-ticket-image-id" data-preview="fhb-ticket-image-preview"><?php esc_html_e( 'Brug plakaten', 'forsamlingshus-billetter' ); ?></button>
 					</p>
-					<p class="description"><?php esc_html_e( 'Tomt felt bruger plakaten. En plakat eller et billede her erstatter baggrunden fra Billetter → Billetdesign og bruger samme zoom og placering. Tekst, logo og QR-kode bliver, hvor de er sat.', 'forsamlingshus-billetter' ); ?></p>
+					<p class="description"><?php esc_html_e( 'Tomt felt bruger plakaten. Hele billedet vises foroven på billetten, og teksten står under det, ligesom i eksemplet under Billetdesign.', 'forsamlingshus-billetter' ); ?></p>
 				</td>
 			</tr>
 			<tr>

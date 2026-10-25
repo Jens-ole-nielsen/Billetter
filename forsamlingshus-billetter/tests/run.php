@@ -347,79 +347,26 @@ $small_pdf = ( new TicketPdf() )->render_order(
 	$placed
 );
 check( str_contains( $small_pdf, '/MediaBox [0 0 297.64 419.53]' ), 'chosen ticket size changes the PDF page' );
-$placed['ticket_size'] = 'a4';
-$placed['blocks'] = array( 'heading' => array( 'x' => 40, 'y' => 40 ) );
-$left_pdf = ( new TicketPdf() )->render_order(
-	array(
-		array(
-			'token' => $tokens[0],
-			'sequence' => 1,
-		),
-	),
-	$placed
-);
-$placed['blocks'] = array( 'heading' => array( 'x' => 620, 'y' => 40 ) );
-$right_pdf = ( new TicketPdf() )->render_order(
-	array(
-		array(
-			'token' => $tokens[0],
-			'sequence' => 1,
-		),
-	),
-	$placed
-);
-$first_text_x = static function ( string $pdf ): float {
-	if ( 1 !== preg_match( '/Tf ([\d.]+) ([\d.]+) Td/', $pdf, $match ) ) {
-		return -1;
-	}
-
-	return (float) $match[1];
-};
-check( $first_text_x( $right_pdf ) > $first_text_x( $left_pdf ) + 40, 'a saved heading position moves the text on the PDF' );
-$image_x = static function ( string $pdf ): float {
-	if ( 1 !== preg_match( '/re W n [\d.]+ 0 0 [\d.]+ ([\d.-]+) /', $pdf, $match ) ) {
-		return -9999.0;
-	}
-
-	return (float) $match[1];
-};
-$shift = $placed;
-$shift['show_qr'] = false;
-$shift['bg_scale'] = 1000;
-$shift['bg_x'] = 0;
-$shift['bg_y'] = 0;
-$shift['blocks'] = array( 'heading' => array( 'x' => 80, 'y' => 40 ) );
-$still_pdf = ( new TicketPdf() )->render_order(
-	array( array( 'token' => $tokens[0], 'sequence' => 1 ) ),
-	$shift,
-	null,
-	array( 'data' => $jpeg, 'w' => 2, 'h' => 2 )
-);
-$shift['bg_x'] = 200;
-$dragged_pdf = ( new TicketPdf() )->render_order(
-	array( array( 'token' => $tokens[0], 'sequence' => 1 ) ),
-	$shift,
-	null,
-	array( 'data' => $jpeg, 'w' => 2, 'h' => 2 )
-);
-check( $image_x( $dragged_pdf ) > $image_x( $still_pdf ) + 50, 'the PDF moves the photo with the saved drag' );
-check( abs( $first_text_x( $dragged_pdf ) - $first_text_x( $still_pdf ) ) < 0.1, 'dragging the photo does not move the heading' );
+$cream = array( 255, 251, 245 );
+check( array( 28, 28, 28 ) === Color::on_surface( array( 245, 245, 245 ), $cream ), 'light ink on the cream paper becomes dark' );
+check( array( 31, 75, 58 ) === Color::on_surface( array( 31, 75, 58 ), $cream ), 'dark green stays readable on the cream paper' );
 
 $layout_page = TicketFrame::size( 'a4' );
-$layout_blocks = TicketFrame::blocks_from(
-	array(
-		'block_heading_x' => 70,
-		'block_heading_y' => 48,
-		'block_date_x' => 80,
-		'block_date_y' => 240,
-		'block_qr_x' => 520,
-		'block_qr_y' => 220,
-	)
-);
-$layout_scene = TicketFrame::scene( 1600, 900, $layout_page['w'], $layout_page['h'], 1000, 120, 40, $layout_blocks );
-check( $layout_scene['photo']['h'] < ( $layout_page['h'] * 0.55 ) && abs( $layout_scene['photo']['w'] - $layout_page['w'] ) < 1, 'a saved wide photo fits the page width instead of covering it' );
-check( abs( ( $layout_scene['blocks']['heading']['x'] / $layout_page['w'] ) - 0.07 ) < 0.002, 'a saved heading keeps its per-mille origin' );
-check( abs( ( $layout_scene['blocks']['qr']['x'] / $layout_page['w'] ) - 0.52 ) < 0.002 && abs( ( $layout_scene['blocks']['qr']['w'] / $layout_page['w'] ) - 0.42 ) < 0.002, 'the QR box uses the designer fraction of the page' );
+$sheet_fields = array( 'heading', 'event', 'date', 'time', 'buyer', 'price' );
+$wide_sheet = TicketFrame::sheet( 1600, 757, $layout_page['w'], $layout_page['h'], $sheet_fields, false );
+check( abs( ( $wide_sheet['photo']['w'] / $wide_sheet['photo']['h'] ) - ( 1600 / 757 ) ) < 0.01, 'a wide poster keeps its aspect' );
+check( abs( $wide_sheet['photo']['w'] - $layout_page['w'] ) < 1 && $wide_sheet['photo']['y'] < 0.1, 'a wide poster fills the top and is not cropped on the sides' );
+check( $wide_sheet['photo']['h'] / $layout_page['h'] <= 0.421, 'the poster band stays within the shared cap' );
+check( $wide_sheet['blocks']['heading']['y'] > $wide_sheet['photo']['h'] && $wide_sheet['blocks']['price']['y'] > $wide_sheet['photo']['h'], 'the fields start under the poster' );
+check( $wide_sheet['blocks']['qr']['x'] > ( $layout_page['w'] / 2 ) && $wide_sheet['blocks']['qr']['y'] > $wide_sheet['photo']['h'], 'the QR card sits on the right, under the poster' );
+$tall_sheet = TicketFrame::sheet( 900, 2200, $layout_page['w'], $layout_page['h'], array( 'heading' ), false );
+check( abs( ( $tall_sheet['photo']['h'] / $layout_page['h'] ) - 0.42 ) < 0.002 && $tall_sheet['photo']['x'] > 1 && $tall_sheet['photo']['w'] < $layout_page['w'] - 1, 'a tall poster is letterboxed inside the top band' );
+check( abs( ( $tall_sheet['photo']['w'] / $tall_sheet['photo']['h'] ) - ( 900 / 2200 ) ) < 0.01, 'a tall poster is shown whole' );
+$logo_sheet = TicketFrame::sheet( 1600, 757, $layout_page['w'], $layout_page['h'], $sheet_fields, true );
+check( $logo_sheet['blocks']['logo']['y'] + $logo_sheet['blocks']['logo']['h'] <= $logo_sheet['blocks']['qr']['y'] + 0.2, 'the logo sits above the QR card' );
+$dragged_sheet = TicketFrame::sheet( 1600, 757, $layout_page['w'], $layout_page['h'], $sheet_fields, false );
+check( $dragged_sheet['photo'] === $wide_sheet['photo'] && $dragged_sheet['blocks']['heading'] === $wide_sheet['blocks']['heading'], 'the sheet does not take a saved drag or zoom' );
+
 $layout_pdf = ( new TicketPdf() )->render_order(
 	array(
 		array(
@@ -429,35 +376,42 @@ $layout_pdf = ( new TicketPdf() )->render_order(
 	),
 	array(
 		'heading' => 'Adgangsbillet',
+		'event' => 'Fest i forsamlingshuset',
 		'date' => 'lørdag 14. juni 2026',
+		'time' => '19:00',
+		'buyer' => 'Jens Hansen',
+		'price' => '150,00 kr.',
 		'order_number' => 'FHB-00012',
 		'primary' => '#1F4B3A',
 		'text' => '#1C1C1C',
 		'background' => '#FFFBF5',
-		'show_event' => false,
+		'show_event' => true,
 		'show_date' => true,
-		'show_time' => false,
-		'show_buyer' => false,
-		'show_price' => false,
+		'show_time' => true,
+		'show_buyer' => true,
+		'show_price' => true,
 		'show_qr' => true,
-		'pad_blocks' => '1',
 		'ticket_size' => 'a4',
-		'bg_scale' => 1000,
-		'bg_x' => 120,
-		'bg_y' => 40,
-		'blocks' => $layout_blocks,
+		'bg_scale' => 2500,
+		'bg_x' => 400,
+		'bg_y' => 300,
+		'blocks' => array(
+			'heading' => array(
+				'x' => 900,
+				'y' => 40,
+			),
+		),
 	),
 	null,
 	array(
 		'data' => $jpeg,
 		'w' => 1600,
-		'h' => 900,
+		'h' => 757,
 	)
 );
-$same_fraction = static function ( array $got, array $want, float $page_w, float $page_h ): bool {
+$same_box = static function ( array $got, array $want ): bool {
 	foreach ( array( 'x', 'y', 'w', 'h' ) as $key ) {
-		$span = ( 'x' === $key || 'w' === $key ) ? $page_w : $page_h;
-		if ( $span <= 0.0 || abs( $got[ $key ] - $want[ $key ] ) / $span > 0.002 ) {
+		if ( abs( $got[ $key ] - $want[ $key ] ) > 0.6 ) {
 			return false;
 		}
 	}
@@ -474,85 +428,73 @@ if ( 1 === preg_match( '/re W n ([\d.]+) 0 0 ([\d.]+) ([\d.-]+) ([\d.-]+) cm/', 
 		'h' => $draw_h,
 	);
 }
-check( is_array( $pdf_photo ) && $same_fraction( $pdf_photo, $layout_scene['photo'], $layout_page['w'], $layout_page['h'] ), 'saved background transform lands at the same place in the PDF' );
+check( is_array( $pdf_photo ) && $same_box( $pdf_photo, $wide_sheet['photo'] ), 'the PDF draws the same poster rectangle as the sheet' );
 preg_match_all( '/([\d.-]+) ([\d.-]+) ([\d.-]+) ([\d.-]+) re f/', $layout_pdf, $rect_matches, PREG_SET_ORDER );
-$pdf_rects = array();
+$qr_drawn = false;
 foreach ( $rect_matches as $rect_match ) {
 	$rect_h = (float) $rect_match[4];
-	$pdf_rects[] = array(
+	$rect = array(
 		'x' => (float) $rect_match[1],
 		'y' => $layout_page['h'] - (float) $rect_match[2] - $rect_h,
 		'w' => (float) $rect_match[3],
 		'h' => $rect_h,
 	);
-}
-foreach ( array( 'heading', 'date', 'qr' ) as $layout_name ) {
-	$layout_found = false;
-	foreach ( $pdf_rects as $pdf_rect ) {
-		if ( $same_fraction( $pdf_rect, $layout_scene['blocks'][ $layout_name ], $layout_page['w'], $layout_page['h'] ) ) {
-			$layout_found = true;
-			break;
-		}
+	if ( $same_box( $rect, $wide_sheet['blocks']['qr'] ) ) {
+		$qr_drawn = true;
 	}
-	check( $layout_found, 'saved ' . $layout_name . ' box lands at the same place in the PDF' );
 }
-$placed['blocks'] = array( 'heading' => array( 'x' => 900, 'y' => 40 ) );
-$edge_pdf = ( new TicketPdf() )->render_order(
-	array(
-		array(
-			'token' => $tokens[0],
-			'sequence' => 1,
-		),
-	),
-	$placed
-);
-check( $first_text_x( $edge_pdf ) > 450, 'a heading dropped on the right is not pulled back into a column' );
-$pad_off = $placed;
-$pad_off['pad_blocks'] = '0';
-$pad_off['blocks'] = array( 'heading' => array( 'x' => 40, 'y' => 40 ) );
-$plain_pad = ( new TicketPdf() )->render_order(
-	array(
-		array(
-			'token' => $tokens[0],
-			'sequence' => 1,
-		),
-	),
-	$pad_off,
-	null,
-	array(
-		'data' => $jpeg,
-		'w' => 2,
-		'h' => 2,
-	)
-);
-$pad_on = $pad_off;
-$pad_on['pad_blocks'] = 'auto';
-$photo_pad = ( new TicketPdf() )->render_order(
-	array(
-		array(
-			'token' => $tokens[0],
-			'sequence' => 1,
-		),
-	),
-	$pad_on,
-	null,
-	array(
-		'data' => $jpeg,
-		'w' => 2,
-		'h' => 2,
-	)
-);
-$white = static function ( string $pdf ): int {
-	return substr_count( $pdf, '1.000 1.000 1.000 rg' );
+check( $qr_drawn, 'the PDF draws the QR card on the sheet rectangle' );
+$first_text_x = static function ( string $pdf ): float {
+	if ( 1 !== preg_match( '/Tf ([\d.]+) ([\d.-]+) Td/', $pdf, $match ) ) {
+		return -1.0;
+	}
+
+	return (float) $match[1];
 };
-check( $white( $photo_pad ) > $white( $plain_pad ), 'a photo keeps the light pad unless it is turned off' );
-check( $white( $plain_pad ) > 0, 'the QR code keeps its white background when the pad is off' );
+check( abs( $first_text_x( $layout_pdf ) - $wide_sheet['blocks']['heading']['x'] ) < 1, 'a saved heading position does not move the text' );
+$code_baselines = array();
+$manual = Token::grouped( $tokens[0] );
+if ( preg_match_all( '/Tf ([\d.-]+) ([\d.-]+) Td \(([^)]*)\) Tj/', $layout_pdf, $text_matches, PREG_SET_ORDER ) ) {
+	foreach ( $text_matches as $text_match ) {
+		$x = (float) $text_match[1];
+		$from_top = $layout_page['h'] - (float) $text_match[2];
+		$qr_box = $wide_sheet['blocks']['qr'];
+		if ( $x < $qr_box['x'] - 1 || $x > $qr_box['x'] + $qr_box['w'] + 1 ) {
+			continue;
+		}
+		$code_baselines[] = $from_top;
+		check( $from_top > $qr_box['y'] && $from_top < ( $qr_box['y'] + $qr_box['h'] - 2 ), 'QR text stays inside the white card' );
+	}
+}
+check( count( $code_baselines ) >= 4, 'the QR card has the ticket line, the code, the order number and the entrance line' );
+check( 1 === substr_count( $layout_pdf, $manual ), 'the manual code is printed once, on one line' );
+check( ! str_contains( $layout_pdf, '0.961 0.961 0.961 rg' ), 'the sheet does not print light gray text' );
+
+$faint = ( new TicketPdf() )->render_order(
+	array(
+		array(
+			'token' => $tokens[0],
+			'sequence' => 1,
+		),
+	),
+	array(
+		'heading' => 'Adgangsbillet',
+		'buyer' => 'Jens Hansen',
+		'primary' => '#F5F5F5',
+		'text' => '#F8F8F8',
+		'background' => '#FFFBF5',
+		'show_event' => false,
+		'show_date' => false,
+		'show_time' => false,
+		'show_buyer' => true,
+		'show_price' => false,
+		'show_qr' => true,
+	)
+);
+check( str_contains( $faint, '0.110 0.110 0.110 rg' ), 'light text on the cream paper is printed dark' );
 check( 2 === substr_count( $ticket_pdf, '/Type /Page ' ), 'one PDF page per ticket' );
-check( str_contains( $ticket_pdf, 'Billet 1 af 2' ) || str_contains( $ticket_pdf, 'Billet 1 af 2' ), 'ticket label stored' );
-$grouped_parts = explode( ' ', Token::grouped( $tokens[0] ) );
-$grouped_first = implode( ' ', array_slice( $grouped_parts, 0, 4 ) );
-$grouped_second = implode( ' ', array_slice( $grouped_parts, 4 ) );
-check( str_contains( $ticket_pdf, $grouped_first ) && str_contains( $ticket_pdf, $grouped_second ), 'manual code is on the ticket' );
+check( str_contains( $ticket_pdf, 'Billet 1 af 2' ), 'ticket label stored' );
+check( str_contains( $ticket_pdf, Token::grouped( $tokens[0] ) ) && str_contains( $ticket_pdf, Token::grouped( $tokens[1] ) ), 'manual code is on the ticket' );
 
 $code_color = $placed;
 $code_color['text'] = '#0000FF';
@@ -597,7 +539,7 @@ $code_off = ( new TicketPdf() )->render_order(
 		'h' => 2,
 	)
 );
-check( str_contains( $code_off, $grouped_first ), 'manual code stays on the ticket when the QR is off' );
+check( str_contains( $code_off, Token::grouped( $tokens[0] ) ), 'manual code stays on the ticket when the QR is off' );
 check( str_contains( $code_off, '0.000 0.000 1.000 rg' ), 'manual code without the QR uses the ticket text color' );
 check( ! str_contains( $code_off, '1.000 1.000 1.000 rg' ), 'manual code without the QR has no white pad' );
 

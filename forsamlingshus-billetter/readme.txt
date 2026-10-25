@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.7.3
+Stable tag: 1.7.4
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,10 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.7.4 =
+* Billetten har én fast opsætning, og eksemplet viser den. Plakaten ligger foroven som hele billedet. Adgangsbillet, dato, tid, køber og pris står under billedet med tydelig tekst på den lyse bund. QR-kortet står til højre.
+* Teksten ved QR-koden står inde i den hvide firkant, kun én gang, og er sort. Koden står på én linje, når der er plads.
 
 = 1.7.3 =
 * Ordre-PDF'en er en tæt oversigt med ordrenummer, arrangement, køber, e-mail, telefon, antal, beløb, betaling og bemærkning. Summen nederst følger rækkerne.

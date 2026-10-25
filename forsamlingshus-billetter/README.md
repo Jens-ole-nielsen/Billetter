@@ -69,7 +69,7 @@ Der kan højst købes 50 billetter ad gangen. En Stripe-bestilling holder pladse
 
 Efter betaling sendes én PDF til køberen. Der er én side pr. billet, og hver billet har sin egen QR-kode. Koden er et tilfældigt, ugætteligt tal. Den samme kode står også i grupper, så den kan tastes ind, hvis kameraet ikke virker.
 
-Under **Billetter → Billetdesign** vælger I logo, overskrift, farver og om arrangement, dato, tid, køber, pris og QR-kode skal med. Forhåndsvisningen følger valgene. I kan i stedet vælge en Elementor-skabelon. Så bruges den til PDF-billetten.
+Under **Billetter → Billetdesign** vælger I logo, overskrift, farver og om arrangement, dato, tid, køber, pris og QR-kode skal med. Eksemplet er billetten: hele billedet foroven, teksten under det, og QR-kortet til højre. PDF-filen bruger den samme opsætning. I kan i stedet vælge en Elementor-skabelon. Så bruges den til PDF-billetten.
 
 ## Indtjekning
 
