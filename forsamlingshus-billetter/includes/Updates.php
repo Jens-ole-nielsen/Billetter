@@ -28,6 +28,12 @@ final class Updates {
 	public const SCREEN_REFRESH_SECONDS = 120;
 
 	/**
+	 * Last release we are willing to install. Plugin Update Checker's own option
+	 * is cleared by a failed check; this one is not.
+	 */
+	private const OFFER_OPTION = 'fhb_offered_release';
+
+	/**
 	 * Release remembered before this request's update check. WordPress rebuilds
 	 * the plugin list during the update click, and a failed GitHub answer must
 	 * not throw away the release the screen already offered.
@@ -35,6 +41,15 @@ final class Updates {
 	 * @var object|null
 	 */
 	private $snapshot = null;
+
+	/**
+	 * Package copied from the update list before Plugin Update Checker deletes it.
+	 * That checker changes the object WordPress has cached, so a later read of the
+	 * same option no longer contains the release.
+	 *
+	 * @var array{version:string,package:string}|null
+	 */
+	private $seen_offer = null;
 
 	public function __construct( private Settings $settings ) {
 	}
@@ -66,7 +81,8 @@ final class Updates {
 		add_action( 'admin_init', array( $this, 'remember_offer' ), 0 );
 		add_action( 'admin_init', array( $this, 'restore_offer' ), 11 );
 		add_filter( 'update_plugins_github.com', array( $this, 'supply_update' ), 10, 4 );
-		add_filter( 'site_transient_update_plugins', array( $this, 'keep_offer' ), 20 );
+		add_filter( 'site_transient_update_plugins', array( $this, 'note_stored_offer' ), 1 );
+		add_filter( 'site_transient_update_plugins', array( $this, 'keep_offer' ), 100 );
 		add_filter(
 			'puc_check_now-forsamlingshus-billetter',
 			function ( $should_check, $last_check ) {
@@ -147,6 +163,78 @@ final class Updates {
 
 	public static function offer_is_newer( string $offer, string $installed ): bool {
 		return '' !== $offer && version_compare( $offer, $installed, '>' );
+	}
+
+	/**
+	 * The release to install. A failed GitHub check deletes Plugin Update Checker's
+	 * copy, and that checker then removes the release WordPress already stored.
+	 * Keep the newest package that is still ahead of the installed plugin.
+	 *
+	 * @param list<array{version:string,package:string}|null> $candidates
+	 * @return array{version:string,package:string}|null
+	 */
+	public static function choose_offer( array $candidates, string $installed ): ?array {
+		$best = null;
+		foreach ( $candidates as $candidate ) {
+			if ( ! is_array( $candidate ) ) {
+				continue;
+			}
+			$version = trim( (string) ( $candidate['version'] ?? '' ) );
+			$package = trim( (string) ( $candidate['package'] ?? '' ) );
+			if ( ! self::offer_is_newer( $version, $installed ) || '' === $package ) {
+				continue;
+			}
+			if ( null === $best || version_compare( $version, $best['version'], '>' ) ) {
+				$best = array(
+					'version' => $version,
+					'package' => $package,
+				);
+			}
+		}
+
+		return $best;
+	}
+
+	/**
+	 * Copy the release before Plugin Update Checker removes it from the list.
+	 * The copy is plain text, so a later edit of the cached object cannot erase it.
+	 *
+	 * @param mixed $updates
+	 * @return mixed
+	 */
+	public function note_stored_offer( $updates ) {
+		$offer = self::offer_from_transient_value( $updates );
+		if ( null === $offer || ! self::offer_is_newer( $offer['version'], $this->installed_version() ) ) {
+			return $updates;
+		}
+		$this->seen_offer = $offer;
+		$this->store_offer( $offer );
+
+		return $updates;
+	}
+
+	/**
+	 * @param mixed $updates
+	 * @return array{version:string,package:string}|null
+	 */
+	public static function offer_from_transient_value( mixed $updates ): ?array {
+		if ( ! is_object( $updates ) || ! isset( $updates->response ) || ! is_array( $updates->response ) ) {
+			return null;
+		}
+		$item = $updates->response[ self::plugin_file() ] ?? null;
+		if ( ! is_object( $item ) ) {
+			return null;
+		}
+		$version = trim( (string) ( $item->new_version ?? $item->version ?? '' ) );
+		$package = trim( (string) ( $item->package ?? '' ) );
+		if ( '' === $version || '' === $package ) {
+			return null;
+		}
+
+		return array(
+			'version' => $version,
+			'package' => $package,
+		);
 	}
 
 	public function remember_offer(): void {
@@ -252,12 +340,73 @@ final class Updates {
 	 * @return array{version:string,package:string}|null
 	 */
 	private function current_offer(): ?array {
-		$live = self::offer_from_state( get_site_option( 'fhb_update_check' ) );
-		if ( null !== $live ) {
-			return $live;
+		$installed = $this->installed_version();
+		$best = self::choose_offer(
+			array(
+				self::offer_from_state( get_site_option( 'fhb_update_check' ) ),
+				self::offer_from_state( $this->snapshot ),
+				$this->seen_offer,
+				$this->saved_offer(),
+				$this->offer_from_stored_transient(),
+			),
+			$installed
+		);
+		if ( null === $best ) {
+			$saved = $this->saved_offer();
+			if ( null !== $saved && ! self::offer_is_newer( $saved['version'], $installed ) ) {
+				delete_option( self::OFFER_OPTION );
+			}
+
+			return null;
+		}
+		$this->store_offer( $best );
+
+		return $best;
+	}
+
+	/**
+	 * @return array{version:string,package:string}|null
+	 */
+	private function saved_offer(): ?array {
+		$saved = get_option( self::OFFER_OPTION );
+		if ( ! is_array( $saved ) ) {
+			return null;
+		}
+		$version = trim( (string) ( $saved['version'] ?? '' ) );
+		$package = trim( (string) ( $saved['package'] ?? '' ) );
+		if ( '' === $version || '' === $package ) {
+			return null;
 		}
 
-		return self::offer_from_state( $this->snapshot );
+		return array(
+			'version' => $version,
+			'package' => $package,
+		);
+	}
+
+	/**
+	 * @param array{version:string,package:string} $offer
+	 */
+	private function store_offer( array $offer ): void {
+		$saved = $this->saved_offer();
+		if ( null !== $saved && $saved['version'] === $offer['version'] && $saved['package'] === $offer['package'] ) {
+			return;
+		}
+		update_option( self::OFFER_OPTION, $offer, false );
+	}
+
+	/**
+	 * WordPress may already have saved the release. Reading the option avoids
+	 * the filter that Plugin Update Checker uses to remove it.
+	 *
+	 * @return array{version:string,package:string}|null
+	 */
+	private function offer_from_stored_transient(): ?array {
+		if ( ! function_exists( 'get_site_option' ) ) {
+			return null;
+		}
+
+		return self::offer_from_transient_value( get_site_option( '_site_transient_update_plugins' ) );
 	}
 
 	private function installed_version(): string {

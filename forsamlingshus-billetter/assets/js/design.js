@@ -72,6 +72,7 @@
 		syncPads();
 		if (event.target && event.target.id === "fhb-ticket-size") {
 			syncSize();
+			window.requestAnimationFrame(layoutPhoto);
 		}
 	});
 	document.addEventListener("fhb-media", function (event) {
@@ -93,14 +94,115 @@
 			return;
 		}
 		if (event.detail.target === "fhb-background-id") {
+			var photo = document.getElementById("fhb-ticket-photo");
+			if (!photo) {
+				return;
+			}
 			if (event.detail.url) {
-				preview.style.backgroundImage = 'url("' + String(event.detail.url).replace(/["\\]/g, "") + '")';
+				photo.hidden = false;
+				photo.src = String(event.detail.url);
 				preview.classList.add("has-photo");
 			} else {
-				preview.style.backgroundImage = "none";
+				photo.removeAttribute("src");
+				photo.hidden = true;
 				preview.classList.remove("has-photo");
 			}
 			syncPads();
+			layoutPhoto();
+		}
+	});
+
+	function layoutPhoto() {
+		var photo = document.getElementById("fhb-ticket-photo");
+		var scaleInput = document.getElementById("fhb-bg-scale");
+		var xInput = document.getElementById("fhb-bg-x");
+		var yInput = document.getElementById("fhb-bg-y");
+		var out = document.getElementById("fhb-bg-scale-value");
+		if (scaleInput && out) {
+			out.textContent = Math.round(Number(scaleInput.value) / 10) + " %";
+		}
+		if (!photo || photo.hidden || !photo.naturalWidth || !photo.naturalHeight) {
+			return;
+		}
+		var bounds = preview.getBoundingClientRect();
+		if (bounds.width < 1 || bounds.height < 1) {
+			return;
+		}
+		var scale = scaleInput ? Number(scaleInput.value) : 1000;
+		var ox = xInput ? Number(xInput.value) : 0;
+		var oy = yInput ? Number(yInput.value) : 0;
+		if (!scale) {
+			scale = 1000;
+		}
+		var cover = Math.max(bounds.width / photo.naturalWidth, bounds.height / photo.naturalHeight);
+		var w = photo.naturalWidth * cover * (scale / 1000);
+		var h = photo.naturalHeight * cover * (scale / 1000);
+		var cx = bounds.width / 2 + (bounds.width * ox) / 1000;
+		var cy = bounds.height / 2 + (bounds.height * oy) / 1000;
+		photo.style.width = w + "px";
+		photo.style.height = h + "px";
+		photo.style.left = cx - w / 2 + "px";
+		photo.style.top = cy - h / 2 + "px";
+	}
+
+	var photoNode = document.getElementById("fhb-ticket-photo");
+	if (photoNode) {
+		photoNode.addEventListener("load", layoutPhoto);
+	}
+	var zoom = document.getElementById("fhb-bg-scale");
+	if (zoom) {
+		zoom.addEventListener("input", layoutPhoto);
+	}
+	window.addEventListener("resize", layoutPhoto);
+
+	preview.addEventListener("pointerdown", function (event) {
+		if (event.button !== undefined && event.button !== 0) {
+			return;
+		}
+		if (event.target && event.target.closest && event.target.closest("[data-block]")) {
+			return;
+		}
+		if (!preview.classList.contains("has-photo")) {
+			return;
+		}
+		var xInput = document.getElementById("fhb-bg-x");
+		var yInput = document.getElementById("fhb-bg-y");
+		if (!xInput || !yInput) {
+			return;
+		}
+		event.preventDefault();
+		var startX = event.clientX;
+		var startY = event.clientY;
+		var originX = Number(xInput.value) || 0;
+		var originY = Number(yInput.value) || 0;
+		preview.classList.add("is-moving-photo");
+
+		function move(pointer) {
+			var bounds = preview.getBoundingClientRect();
+			if (bounds.width < 1 || bounds.height < 1) {
+				return;
+			}
+			var px = Math.round(originX + ((pointer.clientX - startX) / bounds.width) * 1000);
+			var py = Math.round(originY + ((pointer.clientY - startY) / bounds.height) * 1000);
+			px = Math.max(-2000, Math.min(2000, px));
+			py = Math.max(-2000, Math.min(2000, py));
+			xInput.value = String(px);
+			yInput.value = String(py);
+			layoutPhoto();
+		}
+
+		function end() {
+			preview.classList.remove("is-moving-photo");
+			preview.removeEventListener("pointermove", move);
+			preview.removeEventListener("pointerup", end);
+			preview.removeEventListener("pointercancel", end);
+		}
+
+		preview.addEventListener("pointermove", move);
+		preview.addEventListener("pointerup", end);
+		preview.addEventListener("pointercancel", end);
+		if (preview.setPointerCapture) {
+			preview.setPointerCapture(event.pointerId);
 		}
 	});
 
@@ -156,4 +258,5 @@
 	sync();
 	syncPads();
 	syncSize();
+	layoutPhoto();
 })();

@@ -140,6 +140,77 @@ final class TicketFrame {
 	}
 
 	/**
+	 * 1000 means the photo covers the page, centered. Smaller shows more paper.
+	 */
+	public static function photo_scale( mixed $value ): int {
+		if ( ! is_numeric( $value ) ) {
+			return 1000;
+		}
+		$number = (int) $value;
+		if ( $number < 1 ) {
+			return 1000;
+		}
+		if ( $number < 250 ) {
+			return 250;
+		}
+		if ( $number > 4000 ) {
+			return 4000;
+		}
+
+		return $number;
+	}
+
+	/**
+	 * How far the photo's center sits from the page center, per mille of the page.
+	 */
+	public static function photo_offset( mixed $value ): int {
+		if ( ! is_numeric( $value ) ) {
+			return 0;
+		}
+		$number = (int) $value;
+		if ( $number < -2000 ) {
+			return -2000;
+		}
+		if ( $number > 2000 ) {
+			return 2000;
+		}
+
+		return $number;
+	}
+
+	/**
+	 * Where the photo is drawn. Scale 1000 is a centered cover, matching tickets
+	 * saved before zoom existed. Offsets move only the photo.
+	 *
+	 * @return array{x:float,y:float,w:float,h:float}
+	 */
+	public static function photo_frame( int $src_w, int $src_h, float $page_w, float $page_h, mixed $scale = 1000, mixed $offset_x = 0, mixed $offset_y = 0 ): array {
+		$scale = self::photo_scale( $scale );
+		$offset_x = self::photo_offset( $offset_x );
+		$offset_y = self::photo_offset( $offset_y );
+		if ( $src_w < 1 || $src_h < 1 || $page_w <= 0.0 || $page_h <= 0.0 ) {
+			return array(
+				'x' => 0.0,
+				'y' => 0.0,
+				'w' => max( 0.0, $page_w ),
+				'h' => max( 0.0, $page_h ),
+			);
+		}
+		$cover = max( $page_w / $src_w, $page_h / $src_h );
+		$draw_w = $src_w * $cover * ( $scale / 1000 );
+		$draw_h = $src_h * $cover * ( $scale / 1000 );
+		$center_x = ( $page_w / 2 ) + ( $page_w * $offset_x / 1000 );
+		$center_y = ( $page_h / 2 ) + ( $page_h * $offset_y / 1000 );
+
+		return array(
+			'x' => $center_x - ( $draw_w / 2 ),
+			'y' => $center_y - ( $draw_h / 2 ),
+			'w' => $draw_w,
+			'h' => $draw_h,
+		);
+	}
+
+	/**
 	 * Default block positions, per mille from the top left.
 	 *
 	 * @return array<string, array{x:int,y:int}>

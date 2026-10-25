@@ -245,6 +245,18 @@ final class Document {
 	}
 
 	public function jpeg( float $x, float $y, float $w, float $h, string $binary, int $px_w, int $px_h ): void {
+		$this->paint_jpeg( $x, $y, $w, $h, $binary, $px_w, $px_h, false );
+	}
+
+	/**
+	 * Draws a JPEG and clips it to the page, so a zoomed or shifted photo
+	 * cannot paint past the ticket edge. The paper color stays visible outside it.
+	 */
+	public function clipped_jpeg( float $x, float $y, float $w, float $h, string $binary, int $px_w, int $px_h ): void {
+		$this->paint_jpeg( $x, $y, $w, $h, $binary, $px_w, $px_h, true );
+	}
+
+	private function paint_jpeg( float $x, float $y, float $w, float $h, string $binary, int $px_w, int $px_h, bool $clip ): void {
 		$this->ensure_page();
 		$index = count( $this->images );
 		$this->images[] = array(
@@ -254,6 +266,19 @@ final class Document {
 		);
 		$this->current_images[] = $index;
 		$pdf_y = $this->page_height - $y - $h;
+		if ( $clip ) {
+			$this->ops[] = sprintf(
+				'q 0 0 %.2F %.2F re W n %.2F 0 0 %.2F %.2F %.2F cm /Im%d Do Q',
+				$this->page_width,
+				$this->page_height,
+				$w,
+				$h,
+				$x,
+				$pdf_y,
+				$index
+			);
+			return;
+		}
 		$this->ops[] = sprintf( 'q %.2F 0 0 %.2F %.2F %.2F cm /Im%d Do Q', $w, $h, $x, $pdf_y, $index );
 	}
 

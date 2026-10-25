@@ -274,6 +274,15 @@ $wide = TicketFrame::cover_crop( 2000, 1000, 1240, 1754 );
 check( 1000 === $wide['h'] && $wide['w'] < 2000 && $wide['x'] > 0, 'a wide photo is cropped on the sides to fill the ticket' );
 $tall = TicketFrame::cover_crop( 1000, 3000, 1240, 1754 );
 check( 1000 === $tall['w'] && $tall['h'] < 3000 && $tall['y'] > 0, 'a tall photo is cropped top and bottom' );
+$covered = TicketFrame::photo_frame( 2000, 1000, 1240, 1754, 1000, 0, 0 );
+check( abs( $covered['h'] - 1754 ) < 0.05 && $covered['w'] > 1240, 'default zoom covers the ticket' );
+check( abs( ( $covered['x'] + $covered['w'] / 2 ) - 620 ) < 0.2, 'default zoom keeps the photo centered' );
+$zoomed = TicketFrame::photo_frame( 2000, 1000, 1240, 1754, 2000, 0, 0 );
+check( abs( $zoomed['w'] - ( $covered['w'] * 2 ) ) < 0.2 && abs( $zoomed['h'] - ( $covered['h'] * 2 ) ) < 0.2, '200 percent zoom doubles the photo' );
+$moved = TicketFrame::photo_frame( 2000, 1000, 1240, 1754, 1000, 100, -50 );
+check( abs( $moved['x'] - $covered['x'] - 124 ) < 0.2 && abs( $moved['y'] - $covered['y'] + 87.7 ) < 0.2, 'dragging moves only the photo by a fraction of the page' );
+check( 1000 === TicketFrame::photo_scale( '' ) && 250 === TicketFrame::photo_scale( 10 ) && 4000 === TicketFrame::photo_scale( 9000 ), 'zoom stays between 25 and 400 percent' );
+check( 0 === TicketFrame::photo_offset( 'nope' ) && -2000 === TicketFrame::photo_offset( -5000 ) && 2000 === TicketFrame::photo_offset( 9000 ), 'photo drag stays within range' );
 
 $photo_pdf = ( new TicketPdf() )->render_order(
 	array(
@@ -363,6 +372,34 @@ $first_text_x = static function ( string $pdf ): float {
 	return (float) $match[1];
 };
 check( $first_text_x( $right_pdf ) > $first_text_x( $left_pdf ) + 40, 'a saved heading position moves the text on the PDF' );
+$image_x = static function ( string $pdf ): float {
+	if ( 1 !== preg_match( '/re W n [\d.]+ 0 0 [\d.]+ ([\d.-]+) /', $pdf, $match ) ) {
+		return -9999.0;
+	}
+
+	return (float) $match[1];
+};
+$shift = $placed;
+$shift['show_qr'] = false;
+$shift['bg_scale'] = 1000;
+$shift['bg_x'] = 0;
+$shift['bg_y'] = 0;
+$shift['blocks'] = array( 'heading' => array( 'x' => 80, 'y' => 40 ) );
+$still_pdf = ( new TicketPdf() )->render_order(
+	array( array( 'token' => $tokens[0], 'sequence' => 1 ) ),
+	$shift,
+	null,
+	array( 'data' => $jpeg, 'w' => 2, 'h' => 2 )
+);
+$shift['bg_x'] = 200;
+$dragged_pdf = ( new TicketPdf() )->render_order(
+	array( array( 'token' => $tokens[0], 'sequence' => 1 ) ),
+	$shift,
+	null,
+	array( 'data' => $jpeg, 'w' => 2, 'h' => 2 )
+);
+check( $image_x( $dragged_pdf ) > $image_x( $still_pdf ) + 50, 'the PDF moves the photo with the saved drag' );
+check( abs( $first_text_x( $dragged_pdf ) - $first_text_x( $still_pdf ) ) < 0.1, 'dragging the photo does not move the heading' );
 $placed['blocks'] = array( 'heading' => array( 'x' => 900, 'y' => 40 ) );
 $edge_pdf = ( new TicketPdf() )->render_order(
 	array(
@@ -533,6 +570,35 @@ check( null === Updates::offer_from_state( (object) array() ), 'a failed check h
 check( true === Updates::offer_is_newer( '1.6.0', '1.5.0' ), '1.6.0 is newer than the installed plugin' );
 check( false === Updates::offer_is_newer( '1.5.0', '1.5.0' ), 'the same version is not offered again' );
 check( 1 === Updates::CHECK_PERIOD_HOURS, 'update checks are hourly, not every twelve hours' );
+$chosen = Updates::choose_offer(
+	array(
+		array(
+			'version' => '1.6.1',
+			'package' => 'https://github.com/Jens-ole-nielsen/Billetter/releases/download/v1.6.1/forsamlingshus-billetter.zip',
+		),
+		null,
+		array(
+			'version' => '1.7.0',
+			'package' => 'https://github.com/Jens-ole-nielsen/Billetter/releases/download/v1.7.0/forsamlingshus-billetter.zip',
+		),
+	),
+	'1.6.1'
+);
+check( is_array( $chosen ) && '1.7.0' === $chosen['version'], 'the newest release still ahead of the installed plugin is kept' );
+check( null === Updates::choose_offer( array( array( 'version' => '1.6.1', 'package' => 'https://example.test/forsamlingshus-billetter.zip' ) ), '1.6.1' ), 'the installed version is not offered again' );
+$stored_transient = (object) array(
+	'response' => array(
+		'forsamlingshus-billetter/forsamlingshus-billetter.php' => (object) array(
+			'new_version' => '1.7.0',
+			'package' => 'https://github.com/Jens-ole-nielsen/Billetter/releases/download/v1.7.0/forsamlingshus-billetter.zip',
+		),
+	),
+);
+$from_list = Updates::offer_from_transient_value( $stored_transient );
+check( is_array( $from_list ) && '1.7.0' === $from_list['version'] && str_ends_with( $from_list['package'], 'forsamlingshus-billetter.zip' ), 'a release WordPress already stored keeps its zip' );
+$stripped = clone $stored_transient;
+unset( $stripped->response['forsamlingshus-billetter/forsamlingshus-billetter.php'] );
+check( null === Updates::offer_from_transient_value( $stripped ), 'a list with the release removed has nothing to install' );
 check( true === TicketFrame::pads_content( 'auto', true ) && false === TicketFrame::pads_content( 'auto', false ), 'the light pad follows the photo unless chosen' );
 check( false === TicketFrame::pads_content( '0', true ) && true === TicketFrame::pads_content( '1', false ), 'the light pad can be forced off or on' );
 check( 'auto' === TicketFrame::pad_choice( 'maybe' ), 'an unknown pad choice stays automatic' );

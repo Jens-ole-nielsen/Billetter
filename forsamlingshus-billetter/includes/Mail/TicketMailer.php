@@ -174,6 +174,9 @@ final class TicketMailer {
 			'ticket_image_id' => $event ? (int) ( $event['ticket_image_id'] ?? 0 ) : 0,
 			'background_id' => (int) $design['background_id'],
 			'ticket_size' => (string) $design['ticket_size'],
+			'bg_scale' => TicketFrame::photo_scale( $design['bg_scale'] ?? 1000 ),
+			'bg_x' => TicketFrame::photo_offset( $design['bg_x'] ?? 0 ),
+			'bg_y' => TicketFrame::photo_offset( $design['bg_y'] ?? 0 ),
 			'blocks' => TicketFrame::blocks_from( $design ),
 		);
 	}
@@ -212,8 +215,7 @@ final class TicketMailer {
 			(int) ( $context['poster_id'] ?? 0 ),
 			(int) ( $context['background_id'] ?? 0 )
 		);
-		$pixels = TicketFrame::pixels( (string) ( $context['ticket_size'] ?? 'a4' ) );
-		$binary = ( new TicketPdf() )->render_order( $tickets, $context, $this->logo(), Images::jpeg_cover( $image_id, $pixels['w'], $pixels['h'] ) );
+		$binary = ( new TicketPdf() )->render_order( $tickets, $context, $this->logo(), Images::jpeg_from_attachment( $image_id, 2400 ) );
 
 		return str_starts_with( $binary, '%PDF' ) ? $binary : null;
 	}

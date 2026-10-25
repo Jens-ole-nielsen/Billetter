@@ -61,11 +61,19 @@ final class TicketPdf {
 		$photo = is_array( $background ) && isset( $background['data'], $background['w'], $background['h'] ) && is_string( $background['data'] );
 		$pad_color = array( 255, 255, 255 );
 
+		$doc->fill_rgb( $paper[0], $paper[1], $paper[2] );
+		$doc->rect( 0, 0, $page_w, $page_h, 'F' );
 		if ( $photo ) {
-			$doc->jpeg( 0, 0, $page_w, $page_h, $background['data'], (int) $background['w'], (int) $background['h'] );
-		} else {
-			$doc->fill_rgb( $paper[0], $paper[1], $paper[2] );
-			$doc->rect( 0, 0, $page_w, $page_h, 'F' );
+			$frame = TicketFrame::photo_frame(
+				(int) $background['w'],
+				(int) $background['h'],
+				$page_w,
+				$page_h,
+				$context['bg_scale'] ?? 1000,
+				$context['bg_x'] ?? 0,
+				$context['bg_y'] ?? 0
+			);
+			$doc->clipped_jpeg( $frame['x'], $frame['y'], $frame['w'], $frame['h'], $background['data'], (int) $background['w'], (int) $background['h'] );
 		}
 
 		$pads = TicketFrame::pads_content( $context['pad_blocks'] ?? 'auto', $photo );

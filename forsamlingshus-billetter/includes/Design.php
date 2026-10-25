@@ -25,6 +25,9 @@ final class Design {
 		$defaults = array(
 			'logo_id' => 0,
 			'background_id' => 0,
+			'bg_scale' => 1000,
+			'bg_x' => 0,
+			'bg_y' => 0,
 			'ticket_size' => 'a4',
 			'heading' => 'Adgangsbillet',
 			'color_primary' => '#1F4B3A',
@@ -58,6 +61,9 @@ final class Design {
 		$design = array_merge( self::defaults(), $stored );
 		$design['logo_id'] = absint( $design['logo_id'] );
 		$design['background_id'] = absint( $design['background_id'] ?? 0 );
+		$design['bg_scale'] = TicketFrame::photo_scale( $design['bg_scale'] ?? 1000 );
+		$design['bg_x'] = TicketFrame::photo_offset( $design['bg_x'] ?? 0 );
+		$design['bg_y'] = TicketFrame::photo_offset( $design['bg_y'] ?? 0 );
 		$design['ticket_size'] = TicketFrame::size( (string) ( $design['ticket_size'] ?? 'a4' ) )['key'];
 		$blocks = TicketFrame::blocks_from( $design );
 		foreach ( $blocks as $name => $pos ) {
@@ -97,6 +103,9 @@ final class Design {
 		if ( $design['background_id'] && ! wp_attachment_is_image( $design['background_id'] ) ) {
 			$design['background_id'] = 0;
 		}
+		$design['bg_scale'] = TicketFrame::photo_scale( $input['bg_scale'] ?? 1000 );
+		$design['bg_x'] = TicketFrame::photo_offset( $input['bg_x'] ?? 0 );
+		$design['bg_y'] = TicketFrame::photo_offset( $input['bg_y'] ?? 0 );
 		$design['ticket_size'] = TicketFrame::size( sanitize_key( (string) ( $input['ticket_size'] ?? 'a4' ) ) )['key'];
 		foreach ( TicketFrame::default_blocks() as $name => $pos ) {
 			$design[ 'block_' . $name . '_x' ] = TicketFrame::mille( $input[ 'block_' . $name . '_x' ] ?? $pos['x'] );
