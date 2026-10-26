@@ -202,10 +202,10 @@ $description = wpautop( $description );
 
 			<?php if ( $free || array() !== $methods ) : ?>
 				<div class="fhb-pay">
-					<button type="submit"><?php echo esc_html( $free ? __( 'Hent gratis billetter', 'forsamlingshus-billetter' ) : __( 'Gå til betaling', 'forsamlingshus-billetter' ) ); ?></button>
 					<?php if ( ! $free ) : ?>
 						<p id="fhb-price-preview" class="fhb-pay-amount"><span><?php esc_html_e( 'At betale', 'forsamlingshus-billetter' ); ?></span> <strong data-fhb-payable><?php echo esc_html( $price ); ?></strong></p>
 					<?php endif; ?>
+					<button type="submit"><?php echo esc_html( $free ? __( 'Hent gratis billetter', 'forsamlingshus-billetter' ) : __( 'Gå til betaling', 'forsamlingshus-billetter' ) ); ?></button>
 				</div>
 			<?php endif; ?>
 			<p class="description"><?php esc_html_e( 'Vi bruger navn, e-mail og telefon til at sende billetterne og til indtjekning.', 'forsamlingshus-billetter' ); ?></p>

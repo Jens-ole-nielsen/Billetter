@@ -93,6 +93,7 @@
 }
 
 .fhb-pay-amount {
+	flex: 0 0 auto;
 	margin: 0;
 	line-height: 1.15;
 }
@@ -104,11 +105,13 @@
 }
 
 .fhb-pay-amount strong {
+	display: block;
 	font-size: 1.85rem;
 	font-weight: 700;
 }
 
 .fhb-form .fhb-pay button {
+	flex: 0 0 auto;
 	margin-top: 0;
 }
 
