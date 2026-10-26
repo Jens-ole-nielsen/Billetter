@@ -115,6 +115,12 @@
 	margin-top: 0;
 }
 
+.fhb-form .fhb-pay-note {
+	margin: 1.35rem 0 0;
+	font-size: 0.9rem;
+	line-height: 1.45;
+}
+
 .fhb-form button,
 .fhb-wrap a.fhb-button {
 	margin-top: 1rem;

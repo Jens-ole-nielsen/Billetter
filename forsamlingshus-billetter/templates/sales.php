@@ -208,7 +208,7 @@ $description = wpautop( $description );
 					<button type="submit"><?php echo esc_html( $free ? __( 'Hent gratis billetter', 'forsamlingshus-billetter' ) : __( 'Gå til betaling', 'forsamlingshus-billetter' ) ); ?></button>
 				</div>
 			<?php endif; ?>
-			<p class="description"><?php esc_html_e( 'Vi bruger navn, e-mail og telefon til at sende billetterne og til indtjekning.', 'forsamlingshus-billetter' ); ?></p>
+			<p class="description fhb-pay-note"><?php esc_html_e( 'Vi bruger navn, e-mail og telefon til at sende billetterne og til indtjekning.', 'forsamlingshus-billetter' ); ?></p>
 		</form>
 	<?php elseif ( $remaining > 0 && in_array( $result, array( 'success', 'invoice' ), true ) ) : ?>
 		<p><a href="<?php echo esc_url( remove_query_arg( array( 'fhb_result', 'order', 'fhb_error' ) ) ); ?>"><?php esc_html_e( 'Køb flere billetter', 'forsamlingshus-billetter' ); ?></a></p>
