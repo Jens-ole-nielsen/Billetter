@@ -268,10 +268,11 @@ final class TicketFrame {
 	/**
 	 * Fractions for the fixed ticket sheet. The preview reads the same numbers.
 	 *
-	 * photoMax, gap, marginBottom, logoH and logoGap are per mille of the page
-	 * height. marginX, columnGap and qrW are per mille of the page width.
+	 * photoMax, gap, marginBottom, logoH, logoGap, headingH and fieldH are per
+	 * mille of the page height. marginX, columnGap and qrW are per mille of the
+	 * page width. headingH and fieldH are the compact stack beside the QR card.
 	 *
-	 * @return array{photoMax:int,gap:int,marginX:int,marginBottom:int,columnGap:int,qrW:int,logoH:int,logoGap:int}
+	 * @return array{photoMax:int,gap:int,marginX:int,marginBottom:int,columnGap:int,qrW:int,logoH:int,logoGap:int,headingH:int,fieldH:int}
 	 */
 	public static function sheet_spec(): array {
 		return array(
@@ -283,6 +284,8 @@ final class TicketFrame {
 			'qrW' => 400,
 			'logoH' => 100,
 			'logoGap' => 12,
+			'headingH' => 44,
+			'fieldH' => 46,
 		);
 	}
 
@@ -355,16 +358,27 @@ final class TicketFrame {
 		if ( array() === $names ) {
 			$names[] = 'heading';
 		}
-		$slot = ( $bottom - $content_top ) / count( $names );
-		$y = $content_top;
+		$heading_h = $page_h * $spec['headingH'] / 1000;
+		$field_h = $page_h * $spec['fieldH'] / 1000;
+		$heights = array();
+		$wanted = 0.0;
 		foreach ( $names as $name ) {
+			$height = 'heading' === $name ? $heading_h : $field_h;
+			$heights[] = $height;
+			$wanted += $height;
+		}
+		$room = max( 36.0, $bottom - $content_top );
+		$scale = $wanted > $room ? $room / $wanted : 1.0;
+		$y = $content_top;
+		foreach ( $names as $index => $name ) {
+			$height = $heights[ $index ] * $scale;
 			$blocks[ $name ] = array(
 				'x' => $margin_x,
 				'y' => $y,
 				'w' => $fields_w,
-				'h' => $slot,
+				'h' => $height,
 			);
-			$y += $slot;
+			$y += $height;
 		}
 
 		return array(

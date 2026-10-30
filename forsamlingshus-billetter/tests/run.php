@@ -358,6 +358,10 @@ check( abs( ( $wide_sheet['photo']['w'] / $wide_sheet['photo']['h'] ) - ( 1600 /
 check( abs( $wide_sheet['photo']['w'] - $layout_page['w'] ) < 1 && $wide_sheet['photo']['y'] < 0.1, 'a wide poster fills the top and is not cropped on the sides' );
 check( $wide_sheet['photo']['h'] / $layout_page['h'] <= 0.421, 'the poster band stays within the shared cap' );
 check( $wide_sheet['blocks']['heading']['y'] > $wide_sheet['photo']['h'] && $wide_sheet['blocks']['price']['y'] > $wide_sheet['photo']['h'], 'the fields start under the poster' );
+$field_span = $wide_sheet['blocks']['price']['y'] + $wide_sheet['blocks']['price']['h'] - $wide_sheet['blocks']['heading']['y'];
+$field_room = ( $layout_page['h'] - ( $layout_page['h'] * 0.036 ) ) - $wide_sheet['blocks']['heading']['y'];
+check( $field_span < ( $field_room * 0.55 ), 'the fields form one block beside the QR card' );
+check( abs( ( $wide_sheet['blocks']['date']['y'] + $wide_sheet['blocks']['date']['h'] ) - $wide_sheet['blocks']['time']['y'] ) < 0.5, 'the fields sit against each other' );
 check( $wide_sheet['blocks']['qr']['x'] > ( $layout_page['w'] / 2 ) && $wide_sheet['blocks']['qr']['y'] > $wide_sheet['photo']['h'], 'the QR card sits on the right, under the poster' );
 $tall_sheet = TicketFrame::sheet( 900, 2200, $layout_page['w'], $layout_page['h'], array( 'heading' ), false );
 check( abs( ( $tall_sheet['photo']['h'] / $layout_page['h'] ) - 0.42 ) < 0.002 && $tall_sheet['photo']['x'] > 1 && $tall_sheet['photo']['w'] < $layout_page['w'] - 1, 'a tall poster is letterboxed inside the top band' );
@@ -734,6 +738,12 @@ check( 'wrong_event' === CouponRules::accept( true, true, '', '2026-10-25', 9, 4
 check( true === CouponRules::accept( true, true, '', '2026-10-25', 0, 4, 0, 3 )['ok'], 'an open code is accepted for every event' );
 $rejected = CouponRules::price( 12500, 2, CouponRules::PERCENT, 10, 0 );
 check( 25000 === $rejected['gross_ore'], 'a rejected code does not change the gross price the buyer started from' );
+$front_css = (string) file_get_contents( dirname( __DIR__ ) . '/assets/css/front.css' );
+$sales_page = (string) file_get_contents( dirname( __DIR__ ) . '/includes/SalesPage.php' );
+$sales_template = (string) file_get_contents( dirname( __DIR__ ) . '/templates/sales.php' );
+check( str_contains( $sales_page, "'fhb-sales-page'" ) && str_contains( $sales_page, 'body_class' ), 'the sales page is marked so the theme title can be hidden' );
+check( str_contains( $front_css, 'body.fhb-sales-page h1.entry-title' ) && str_contains( $front_css, 'body.fhb-sales-page h1.main_title' ), 'the theme heading above the poster is hidden' );
+check( str_contains( $sales_template, 'class="fhb-title"' ) && str_contains( $sales_template, 'Tak for din bestilling.' ), 'the title under the poster and the receipt line stay' );
 check( true === Events::shows_remaining_count( '' ), 'existing events keep the public ticket count' );
 check( true === Events::shows_remaining_count( '1' ), 'an enabled count stays visible' );
 check( false === Events::shows_remaining_count( '0' ), 'the public count can be hidden' );

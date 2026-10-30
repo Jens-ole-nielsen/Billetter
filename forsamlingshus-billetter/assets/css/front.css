@@ -1,3 +1,11 @@
+/* The theme prints its page title above the poster, often with a badge.
+   The event title already sits under the poster. */
+body.fhb-sales-page h1.entry-title,
+body.fhb-sales-page h1.main_title,
+body.fhb-sales-page .wp-block-post-title {
+	display: none !important;
+}
+
 .fhb-wrap {
 	max-width: 42rem;
 	margin: 1.5rem auto 2.5rem;

@@ -12,7 +12,9 @@
 		columnGap: 28,
 		qrW: 400,
 		logoH: 100,
-		logoGap: 12
+		logoGap: 12,
+		headingH: 44,
+		fieldH: 46
 	};
 	try {
 		spec = Object.assign(spec, JSON.parse(preview.getAttribute("data-sheet") || "{}"));
@@ -117,9 +119,21 @@
 		var qrY = contentTop + (logoH > 0 ? logoH + (pageH * spec.logoGap) / 1000 : 0);
 		blocks.qr = { x: qrX, y: qrY, w: qrW, h: Math.max(36, bottom - qrY) };
 		var names = fields.length ? fields : ["heading"];
-		var slot = (bottom - contentTop) / names.length;
+		var headingH = (pageH * spec.headingH) / 1000;
+		var fieldH = (pageH * spec.fieldH) / 1000;
+		var heights = names.map(function (name) {
+			return name === "heading" ? headingH : fieldH;
+		});
+		var wanted = heights.reduce(function (sum, height) {
+			return sum + height;
+		}, 0);
+		var room = Math.max(36, bottom - contentTop);
+		var scale = wanted > room ? room / wanted : 1;
+		var y = contentTop;
 		names.forEach(function (name, index) {
-			blocks[name] = { x: marginX, y: contentTop + index * slot, w: fieldsW, h: slot };
+			var height = heights[index] * scale;
+			blocks[name] = { x: marginX, y: y, w: fieldsW, h: height };
+			y += height;
 		});
 		return { photo: photo, blocks: blocks };
 	}

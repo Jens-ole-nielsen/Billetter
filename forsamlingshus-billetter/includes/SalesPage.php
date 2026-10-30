@@ -31,6 +31,22 @@ final class SalesPage {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'wp_footer', array( $this, 'print_late_style' ) );
 		add_action( 'template_redirect', array( $this, 'release_cancelled_checkout' ) );
+		add_filter( 'body_class', array( $this, 'body_class' ) );
+	}
+
+	/**
+	 * Marks the sales and receipt view so the theme page title can stay hidden.
+	 * The event title is already printed under the poster.
+	 *
+	 * @param list<string> $classes
+	 * @return list<string>
+	 */
+	public function body_class( array $classes ): array {
+		if ( $this->viewing_sales_page() ) {
+			$classes[] = 'fhb-sales-page';
+		}
+
+		return $classes;
 	}
 
 	public function sync( int $event_id ): int {
@@ -85,8 +101,7 @@ final class SalesPage {
 	}
 
 	public function enqueue(): void {
-		$post = get_queried_object();
-		if ( ! $post instanceof \WP_Post || ! str_contains( (string) $post->post_content, '[fhb_event' ) ) {
+		if ( ! $this->viewing_sales_page() ) {
 			return;
 		}
 		wp_enqueue_style( 'fhb-front', FHB_URL . 'assets/css/front.css', array(), FHB_VERSION );
@@ -100,6 +115,12 @@ final class SalesPage {
 		if ( wp_script_is( 'fhb-checkout', 'enqueued' ) && ! wp_script_is( 'fhb-checkout', 'done' ) ) {
 			wp_print_scripts( 'fhb-checkout' );
 		}
+	}
+
+	private function viewing_sales_page(): bool {
+		$post = get_queried_object();
+
+		return $post instanceof \WP_Post && str_contains( (string) $post->post_content, '[fhb_event' );
 	}
 
 	private function enqueue_checkout_script(): void {
