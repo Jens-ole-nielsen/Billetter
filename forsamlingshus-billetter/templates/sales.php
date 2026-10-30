@@ -18,6 +18,7 @@ defined( 'ABSPATH' ) || exit;
 use Forsamlingshus\Billetter\CouponRules;
 use Forsamlingshus\Billetter\Format;
 use Forsamlingshus\Billetter\Money;
+use Forsamlingshus\Billetter\SalesWindow;
 
 $errors = array(
 	'validation' => __( 'Tjek navn, e-mail, telefon og antal.', 'forsamlingshus-billetter' ),
@@ -25,6 +26,7 @@ $errors = array(
 	'payment' => __( 'Betalingen kunne ikke startes. Prøv igen, eller vælg faktura hvis det er muligt.', 'forsamlingshus-billetter' ),
 	'method' => __( 'Den valgte betalingsmåde er ikke tilgængelig.', 'forsamlingshus-billetter' ),
 	'closed' => __( 'Salget er lukket.', 'forsamlingshus-billetter' ),
+	'not_started' => __( 'Billetsalget er ikke startet endnu.', 'forsamlingshus-billetter' ),
 	'stripe_min' => __( 'Beløbet er under 2,50 kr., som er Stripes minimum. Vælg faktura, eller køb flere billetter.', 'forsamlingshus-billetter' ),
 	'payment_min' => __( 'Beløbet er under 2,50 kr., som er Stripes minimum. Ordren er ikke oprettet.', 'forsamlingshus-billetter' ),
 	'payment_key_missing' => __( 'Stripe-nøglen mangler. Betalingen kan ikke startes, før den er gemt under Billetter → Indstillinger.', 'forsamlingshus-billetter' ),
@@ -43,7 +45,11 @@ $date = Format::date( (string) $event['date'] );
 $time = Format::time( (string) $event['time'] );
 $price = Money::format_ore( (int) $event['price_ore'] );
 $free = 0 === (int) $event['price_ore'];
-$show_form = $remaining > 0 && ! in_array( $result, array( 'success', 'invoice' ), true );
+$sales_start = SalesWindow::normalize( (string) ( $event['sales_start'] ?? '' ) );
+$sales_open_at = null === $sales_start ? null : SalesWindow::start_timestamp( $sales_start, wp_timezone() );
+$sales_open = null === $sales_open_at || time() >= $sales_open_at;
+$show_form = $remaining > 0 && $sales_open && ! in_array( $result, array( 'success', 'invoice' ), true );
+$sales_waiting = ! $sales_open && null !== $sales_open_at && ! in_array( $result, array( 'success', 'invoice' ), true );
 $description = (string) $event['description'];
 if ( function_exists( 'do_blocks' ) ) {
 	$description = do_blocks( $description );
@@ -145,6 +151,26 @@ $description = wpautop( $description );
 			<?php endif; ?>
 			<button type="button" id="fhb-thanks-close"><?php esc_html_e( 'Luk', 'forsamlingshus-billetter' ); ?></button>
 		</dialog>
+	<?php endif; ?>
+
+	<?php if ( $sales_waiting ) : ?>
+		<div class="fhb-sales-wait fhb-card" role="status">
+			<p>
+				<strong>
+					<?php
+					echo esc_html(
+						sprintf(
+							/* translators: 1: date, 2: time */
+							__( 'Billetsalget starter %1$s kl. %2$s.', 'forsamlingshus-billetter' ),
+							Format::date( substr( (string) $sales_start, 0, 10 ) ),
+							Format::time( substr( (string) $sales_start, 11, 5 ) )
+						)
+					);
+					?>
+				</strong>
+			</p>
+			<p class="fhb-countdown" data-fhb-start="<?php echo esc_attr( (string) $sales_open_at ); ?>"><?php echo esc_html( SalesWindow::countdown_text( time(), (int) $sales_open_at ) ); ?></p>
+		</div>
 	<?php endif; ?>
 
 	<?php if ( $show_form ) : ?>

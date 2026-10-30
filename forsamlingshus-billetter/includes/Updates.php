@@ -27,11 +27,20 @@ final class Updates {
 
 	public const SCREEN_REFRESH_SECONDS = 120;
 
+	public const ASSET_NAME = 'forsamlingshus-billetter.zip';
+
+	public const LATEST_RELEASE_URL = 'https://api.github.com/repos/Jens-ole-nielsen/Billetter/releases/latest';
+
 	/**
 	 * Last release we are willing to install. Plugin Update Checker's own option
 	 * is cleared by a failed check; this one is not.
 	 */
 	private const OFFER_OPTION = 'fhb_offered_release';
+
+	/**
+	 * Unix time of the last direct read of the latest GitHub release.
+	 */
+	private const CHECKED_OPTION = 'fhb_release_checked';
 
 	/**
 	 * Release remembered before this request's update check. WordPress rebuilds
@@ -50,6 +59,11 @@ final class Updates {
 	 * @var array{version:string,package:string}|null
 	 */
 	private $seen_offer = null;
+
+	/**
+	 * One GitHub read per request. The Plugins screen and the update list both ask.
+	 */
+	private bool $release_fetched = false;
 
 	public function __construct( private Settings $settings ) {
 	}
@@ -71,6 +85,16 @@ final class Updates {
 	}
 
 	private function attach(): void {
+		add_action( 'load-plugins.php', array( $this, 'refresh_release' ), 1 );
+		add_action( 'load-update-core.php', array( $this, 'refresh_release' ), 1 );
+		add_action( 'load-update.php', array( $this, 'refresh_release' ), 1 );
+		add_action( 'admin_init', array( $this, 'remember_offer' ), 0 );
+		add_action( 'admin_init', array( $this, 'restore_offer' ), 11 );
+		add_filter( 'update_plugins_github.com', array( $this, 'supply_update' ), 10, 4 );
+		add_filter( 'site_transient_update_plugins', array( $this, 'note_stored_offer' ), 1 );
+		add_filter( 'site_transient_update_plugins', array( $this, 'keep_offer' ), 100 );
+		add_filter( 'puc_request_info_options-forsamlingshus-billetter', array( self::class, 'request_options' ) );
+
 		$checker = PucFactory::buildUpdateChecker(
 			'https://github.com/Jens-ole-nielsen/Billetter',
 			FHB_FILE,
@@ -78,11 +102,6 @@ final class Updates {
 			self::CHECK_PERIOD_HOURS,
 			'fhb_update_check'
 		);
-		add_action( 'admin_init', array( $this, 'remember_offer' ), 0 );
-		add_action( 'admin_init', array( $this, 'restore_offer' ), 11 );
-		add_filter( 'update_plugins_github.com', array( $this, 'supply_update' ), 10, 4 );
-		add_filter( 'site_transient_update_plugins', array( $this, 'note_stored_offer' ), 1 );
-		add_filter( 'site_transient_update_plugins', array( $this, 'keep_offer' ), 100 );
 		add_filter(
 			'puc_check_now-forsamlingshus-billetter',
 			function ( $should_check, $last_check ) {
@@ -163,6 +182,143 @@ final class Updates {
 
 	public static function offer_is_newer( string $offer, string $installed ): bool {
 		return '' !== $offer && version_compare( $offer, $installed, '>' );
+	}
+
+	/**
+	 * Plugin Update Checker gives GitHub three seconds and then, if that misses,
+	 * reads the version from forsamlingshus-billetter.php at the repository root.
+	 * The file lives in the plugin directory, so a missed release becomes "no update"
+	 * and the previous offer is deleted. Ask for the latest release directly.
+	 *
+	 * @param mixed $options
+	 * @return mixed
+	 */
+	public static function request_options( mixed $options ): mixed {
+		if ( ! is_array( $options ) ) {
+			return $options;
+		}
+		$options['timeout'] = 15;
+		if ( ! isset( $options['headers'] ) || ! is_array( $options['headers'] ) ) {
+			$options['headers'] = array();
+		}
+		if ( empty( $options['headers']['User-Agent'] ) ) {
+			$options['headers']['User-Agent'] = 'forsamlingshus-billetter';
+		}
+
+		return $options;
+	}
+
+	/**
+	 * A GitHub release object, or the JSON text of one. The zip asset is required.
+	 * Drafts, pre-releases, and a release that is not newer are left to the caller.
+	 *
+	 * @return array{version:string,package:string}|null
+	 */
+	public static function offer_from_release( mixed $release ): ?array {
+		if ( is_string( $release ) ) {
+			$release = json_decode( $release );
+		}
+		if ( ! is_object( $release ) ) {
+			return null;
+		}
+		if ( ! empty( $release->draft ) || ! empty( $release->prerelease ) ) {
+			return null;
+		}
+		$version = ltrim( trim( (string) ( $release->tag_name ?? '' ) ), 'vV' );
+		if ( '' === $version || 1 !== preg_match( '/^\d/', $version ) ) {
+			return null;
+		}
+		$assets = $release->assets ?? null;
+		if ( ! is_array( $assets ) ) {
+			return null;
+		}
+		foreach ( $assets as $asset ) {
+			if ( ! is_object( $asset ) || self::ASSET_NAME !== (string) ( $asset->name ?? '' ) ) {
+				continue;
+			}
+			$package = trim( (string) ( $asset->browser_download_url ?? '' ) );
+			if ( ! str_starts_with( $package, 'https://' ) ) {
+				return null;
+			}
+
+			return array(
+				'version' => $version,
+				'package' => $package,
+			);
+		}
+
+		return null;
+	}
+
+	/**
+	 * Read the latest public release. A stored token that GitHub rejects is ignored,
+	 * and a failed read leaves the previously saved offer in place.
+	 *
+	 * @return array{version:string,package:string}|null
+	 */
+	public static function fetch_latest_offer( string $token ): ?array {
+		if ( ! function_exists( 'wp_remote_get' ) || ! function_exists( 'wp_remote_retrieve_response_code' ) || ! function_exists( 'wp_remote_retrieve_body' ) ) {
+			return null;
+		}
+		$response = self::github_get( $token );
+		$code = (int) wp_remote_retrieve_response_code( $response );
+		if ( 401 === $code && '' !== $token ) {
+			$response = self::github_get( '' );
+			$code = (int) wp_remote_retrieve_response_code( $response );
+		}
+		if ( function_exists( 'is_wp_error' ) && is_wp_error( $response ) ) {
+			return null;
+		}
+		if ( 200 !== $code ) {
+			return null;
+		}
+
+		return self::offer_from_release( (string) wp_remote_retrieve_body( $response ) );
+	}
+
+	/**
+	 * @return mixed
+	 */
+	private static function github_get( string $token ) {
+		$headers = array(
+			'Accept' => 'application/vnd.github+json',
+			'User-Agent' => 'forsamlingshus-billetter',
+		);
+		if ( '' !== $token ) {
+			$headers['Authorization'] = 'Bearer ' . $token;
+		}
+
+		return wp_remote_get(
+			self::LATEST_RELEASE_URL,
+			array(
+				'timeout' => 15,
+				'headers' => $headers,
+			)
+		);
+	}
+
+	/**
+	 * Plugins, Updates, and WordPress' own update list call this. The install
+	 * click does not: that request must keep the release already on screen.
+	 */
+	public function refresh_release(): void {
+		if ( $this->release_fetched || self::is_update_request() ) {
+			return;
+		}
+		$this->release_fetched = true;
+		if ( ! function_exists( 'get_option' ) || ! function_exists( 'update_option' ) ) {
+			return;
+		}
+		$last = (int) get_option( self::CHECKED_OPTION, 0 );
+		if ( $last > 0 && ( time() - $last ) < self::SCREEN_REFRESH_SECONDS ) {
+			return;
+		}
+		update_option( self::CHECKED_OPTION, time(), false );
+		$offer = self::fetch_latest_offer( self::token_for_auth( $this->settings->github_token() ) );
+		if ( null === $offer || ! self::offer_is_newer( $offer['version'], $this->installed_version() ) ) {
+			return;
+		}
+		$this->store_offer( $offer );
 	}
 
 	/**
@@ -288,6 +444,7 @@ final class Updates {
 		if ( self::plugin_file() !== $plugin_file ) {
 			return $update;
 		}
+		$this->refresh_release();
 		$offer = $this->current_offer();
 		if ( null === $offer ) {
 			return $update;
@@ -296,6 +453,7 @@ final class Updates {
 		return array(
 			'slug' => 'forsamlingshus-billetter',
 			'version' => $offer['version'],
+			'new_version' => $offer['version'],
 			'package' => $offer['package'],
 			'url' => 'https://github.com/Jens-ole-nielsen/Billetter',
 		);
@@ -416,7 +574,7 @@ final class Updates {
 			}
 		}
 		if ( ! function_exists( 'get_plugin_data' ) || ! defined( 'FHB_FILE' ) ) {
-			return '0';
+			return defined( 'FHB_VERSION' ) ? FHB_VERSION : '0';
 		}
 		$data = get_plugin_data( FHB_FILE, false, false );
 

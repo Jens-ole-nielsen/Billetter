@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.7.8
+Stable tag: 1.7.9
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -36,7 +36,7 @@ Billetterne sendes først, når webhooken har tjekket signaturen og markeret ord
 
 = Hvordan opretter jeg et arrangement? =
 
-Gå til Billetter → Arrangementer. Udfyld navn, beskrivelse, plakat, antal billetter, dato, tid og pris. Udgiv arrangementet. Salgssiden oprettes automatisk, og linket står i boksen Billetsalg.
+Gå til Billetter → Arrangementer. Udfyld navn, beskrivelse, plakat, antal billetter, dato, tid og pris. Feltet Billetsalg starter kan vente med at åbne salget. Tomt felt åbner det med det samme. Udgiv arrangementet. Salgssiden oprettes automatisk, og linket står i boksen Billetsalg.
 
 = Hvordan virker indtjekning? =
 
@@ -51,6 +51,10 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.7.9 =
+* Opdateringer vises under Plugins. Tjekket læser selv den seneste GitHub-udgivelse med filen forsamlingshus-billetter.zip. 1.7.8 blev ikke tilbudt, fordi det gamle tjek kun gentog en tom cache: biblioteket gav GitHub tre sekunder, og når det kald mislykkedes, ledte det efter versionsnummeret i forsamlingshus-billetter.php i arkivets rod. Filen ligger i plugin-mappen, så svaret blev «ingen opdatering».
+* På arrangementet kan I sætte, hvornår billetsalget starter. Indtil da viser købssiden tidspunktet og en nedtælling, og formularen kan ikke sende en ordre. Tomt felt åbner salget med det samme.
 
 = 1.7.8 =
 * På salgs- og kvitteringssiden er arrangementets navn væk både som sidetitel over plakaten og som overskrift under plakaten. Dato, tid, pris, «billetter tilbage» og købsformularen bliver. Andre sider beholder deres titel.

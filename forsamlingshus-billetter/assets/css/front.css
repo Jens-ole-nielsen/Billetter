@@ -71,6 +71,20 @@ article:has(.fhb-wrap) > h1.main_title,
 	margin: 1rem 0;
 }
 
+.fhb-sales-wait {
+	margin-top: 1rem;
+}
+
+.fhb-sales-wait p {
+	margin: 0;
+}
+
+.fhb-countdown {
+	margin-top: 0.45rem;
+	font-size: 1.25rem;
+	font-weight: 700;
+}
+
 .fhb-card {
 	border: 1px solid #e4e0d8;
 	border-radius: 12px;

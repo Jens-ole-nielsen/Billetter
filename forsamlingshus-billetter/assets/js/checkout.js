@@ -119,10 +119,54 @@
 		});
 	}
 
+	function countdownText(left) {
+		var days = Math.floor(left / 86400);
+		left -= days * 86400;
+		var hours = Math.floor(left / 3600);
+		left -= hours * 3600;
+		var minutes = Math.floor(left / 60);
+		var seconds = left - minutes * 60;
+		var bits = [];
+		if (days) {
+			bits.push(days + (days === 1 ? " dag" : " dage"));
+		}
+		if (hours) {
+			bits.push(hours + (hours === 1 ? " time" : " timer"));
+		}
+		if (minutes || (!days && !hours)) {
+			bits.push(minutes + (minutes === 1 ? " minut" : " minutter"));
+		}
+		bits.push(seconds + (seconds === 1 ? " sekund" : " sekunder"));
+		var line = bits.join(", ");
+		var last = line.lastIndexOf(", ");
+		if (last !== -1) {
+			line = line.slice(0, last) + " og " + line.slice(last + 2);
+		}
+		return "Salget starter om " + line + ".";
+	}
+
+	function bindCountdown(node) {
+		var start = parseInt(node.getAttribute("data-fhb-start") || "0", 10);
+		if (!start) {
+			return;
+		}
+		function tick() {
+			var left = start - Math.floor(Date.now() / 1000);
+			if (left <= 0) {
+				window.location.reload();
+				return;
+			}
+			node.textContent = countdownText(left);
+		}
+		tick();
+		window.setInterval(tick, 1000);
+	}
+
 	document.querySelectorAll("form.fhb-form").forEach(function (form) {
 		bindInvoice(form);
 		bindCoupon(form);
 	});
+	document.querySelectorAll("[data-fhb-start]").forEach(bindCountdown);
 
 	var thanks = document.getElementById("fhb-thanks");
 	if (thanks && typeof thanks.showModal === "function") {

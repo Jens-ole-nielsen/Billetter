@@ -59,6 +59,9 @@ final class Checkout {
 		if ( ! $event || 'publish' !== $event['status'] ) {
 			$this->fail( $event_id, 'closed' );
 		}
+		if ( ! SalesWindow::is_open( (string) ( $event['sales_start'] ?? '' ), time(), wp_timezone() ) ) {
+			$this->fail( $event_id, 'not_started' );
+		}
 
 		$name = isset( $_POST['buyer_name'] ) ? sanitize_text_field( wp_unslash( $_POST['buyer_name'] ) ) : '';
 		$email = isset( $_POST['buyer_email'] ) ? sanitize_email( wp_unslash( $_POST['buyer_email'] ) ) : '';
@@ -226,6 +229,14 @@ final class Checkout {
 				array(
 					'ok' => false,
 					'message' => 'Salget er lukket.',
+				)
+			);
+		}
+		if ( ! SalesWindow::is_open( (string) ( $event['sales_start'] ?? '' ), time(), wp_timezone() ) ) {
+			wp_send_json(
+				array(
+					'ok' => false,
+					'message' => 'Billetsalget er ikke startet endnu.',
 				)
 			);
 		}

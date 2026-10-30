@@ -20,6 +20,7 @@ require dirname( __DIR__ ) . '/includes/Payments/PaymentMethods.php';
 require dirname( __DIR__ ) . '/includes/Payments/StripeFailure.php';
 require dirname( __DIR__ ) . '/includes/Payments/StripeGateway.php';
 require dirname( __DIR__ ) . '/includes/Updates.php';
+require dirname( __DIR__ ) . '/includes/SalesWindow.php';
 require dirname( __DIR__ ) . '/includes/Format.php';
 require dirname( __DIR__ ) . '/includes/StripeSignature.php';
 require dirname( __DIR__ ) . '/includes/Color.php';
@@ -44,6 +45,7 @@ use Forsamlingshus\Billetter\Payments\PaymentMethods;
 use Forsamlingshus\Billetter\Payments\StripeFailure;
 use Forsamlingshus\Billetter\Payments\StripeGateway;
 use Forsamlingshus\Billetter\Updates;
+use Forsamlingshus\Billetter\SalesWindow;
 use Forsamlingshus\Billetter\RefundRules;
 use Forsamlingshus\Billetter\Pdf\Document;
 use Forsamlingshus\Billetter\OrderExport;
@@ -713,6 +715,52 @@ check( is_array( $from_list ) && '1.7.0' === $from_list['version'] && str_ends_w
 $stripped = clone $stored_transient;
 unset( $stripped->response['forsamlingshus-billetter/forsamlingshus-billetter.php'] );
 check( null === Updates::offer_from_transient_value( $stripped ), 'a list with the release removed has nothing to install' );
+$release_json = json_encode(
+	array(
+		'tag_name' => 'v1.7.8',
+		'draft' => false,
+		'prerelease' => false,
+		'assets' => array(
+			array(
+				'name' => 'forsamlingshus-billetter.zip',
+				'browser_download_url' => 'https://github.com/Jens-ole-nielsen/Billetter/releases/download/v1.7.8/forsamlingshus-billetter.zip',
+			),
+		),
+	)
+);
+$from_release = Updates::offer_from_release( $release_json );
+check( is_array( $from_release ) && '1.7.8' === $from_release['version'], 'the latest release tag is the offered version' );
+check( is_array( $from_release ) && str_ends_with( $from_release['package'], '/forsamlingshus-billetter.zip' ), 'the offered package is the release zip' );
+check( true === Updates::offer_is_newer( $from_release['version'], '1.7.7' ), '1.7.8 is newer than an older install' );
+check( false === Updates::offer_is_newer( $from_release['version'], '1.7.8' ), 'the installed release is not offered again' );
+$without_zip = json_decode( (string) $release_json );
+$without_zip->assets[0]->name = 'source.zip';
+check( null === Updates::offer_from_release( $without_zip ), 'a release without the plugin zip is not offered' );
+$draft = json_decode( (string) $release_json );
+$draft->draft = true;
+check( null === Updates::offer_from_release( $draft ), 'a draft release is not offered' );
+$preview = json_decode( (string) $release_json );
+$preview->prerelease = true;
+check( null === Updates::offer_from_release( $preview ), 'a pre-release is not offered' );
+$options = Updates::request_options( array( 'timeout' => 3 ) );
+check( is_array( $options ) && 15 === $options['timeout'], 'GitHub is given fifteen seconds, not three' );
+check( is_array( $options ) && 'forsamlingshus-billetter' === ( $options['headers']['User-Agent'] ?? '' ), 'GitHub requests send a user agent' );
+$zone = new DateTimeZone( 'Europe/Copenhagen' );
+check( '' === SalesWindow::normalize( '  ' ), 'an empty sales start stays empty' );
+check( '2026-11-02 19:00' === SalesWindow::normalize( '2026-11-02T19:00' ), 'a sales start keeps the date and time' );
+check( null === SalesWindow::normalize( '2026-02-31T19:00' ), 'an impossible sales start is rejected' );
+check( '2026-11-02T19:00' === SalesWindow::input_value( '2026-11-02 19:00' ), 'the metabox field uses datetime-local' );
+$opens = SalesWindow::start_timestamp( '2026-11-02 19:00', $zone );
+check( is_int( $opens ), 'a sales start has a timestamp' );
+check( false === SalesWindow::is_open( '2026-11-02 19:00', (int) $opens - 1, $zone ), 'sales stay closed until the start' );
+check( true === SalesWindow::is_open( '2026-11-02 19:00', (int) $opens, $zone ), 'sales open at the start' );
+check( true === SalesWindow::is_open( '', (int) $opens - 1, $zone ), 'an empty sales start is open immediately' );
+check( 'Salget starter om 1 minut og 30 sekunder.' === SalesWindow::countdown_text( (int) $opens - 90, (int) $opens ), 'the countdown names minutes and seconds' );
+check( 'Billetsalget er åbent.' === SalesWindow::countdown_text( (int) $opens, (int) $opens ), 'the countdown stops when sales open' );
+$event_editor = (string) file_get_contents( dirname( __DIR__ ) . '/includes/EventPostType.php' );
+$checkout = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Checkout.php' );
+check( str_contains( $event_editor, 'name="fhb_sales_start"' ) && str_contains( $event_editor, '_fhb_sales_start' ), 'the sales start field is saved from the event metabox' );
+check( str_contains( $checkout, "'not_started'" ) && str_contains( $checkout, 'SalesWindow::is_open' ), 'checkout refuses an order before sales start' );
 check( true === TicketFrame::pads_content( 'auto', true ) && false === TicketFrame::pads_content( 'auto', false ), 'the light pad follows the photo unless chosen' );
 check( false === TicketFrame::pads_content( '0', true ) && true === TicketFrame::pads_content( '1', false ), 'the light pad can be forced off or on' );
 check( 'auto' === TicketFrame::pad_choice( 'maybe' ), 'an unknown pad choice stays automatic' );
@@ -745,6 +793,7 @@ check( str_contains( $sales_page, "'fhb-sales-page'" ) && str_contains( $sales_p
 check( str_contains( $sales_page, 'in_the_loop' ) && str_contains( $sales_page, 'is_main_query' ), 'the theme title is cleared only in the sales page loop' );
 check( str_contains( $front_css, 'article:has(.fhb-wrap) > h1.entry-title' ) && str_contains( $front_css, '.fhb-title' ), 'the theme heading is hidden only when the sales form is on the page' );
 check( ! str_contains( $sales_template, 'fhb-title' ) && str_contains( $sales_template, 'class="fhb-meta"' ) && str_contains( $sales_template, 'name="buyer_name"' ), 'the event name under the poster is gone and the form stays' );
+check( str_contains( $sales_template, 'fhb-countdown' ) && str_contains( $sales_template, 'data-fhb-start' ) && str_contains( $sales_template, '$sales_open' ) && str_contains( $front_css, '.fhb-countdown' ), 'the sales page can show a countdown and withholds the form until sales open' );
 check( str_contains( $sales_template, 'Tak for din bestilling.' ), 'the receipt line stays' );
 check( true === Events::shows_remaining_count( '' ), 'existing events keep the public ticket count' );
 check( true === Events::shows_remaining_count( '1' ), 'an enabled count stays visible' );

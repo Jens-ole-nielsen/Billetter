@@ -94,6 +94,7 @@ final class EventPostType {
 		$capacity = $event ? (int) $event['capacity'] : 0;
 		$date = $event ? (string) $event['date'] : '';
 		$time = $event ? (string) $event['time'] : '';
+		$sales_start = $event ? SalesWindow::input_value( (string) ( $event['sales_start'] ?? '' ) ) : '';
 		$price = $event && (int) $event['price_ore'] > 0 ? number_format( ( (int) $event['price_ore'] ) / 100, 2, ',', '' ) : '';
 		if ( $event && 0 === (int) $event['price_ore'] && '' !== (string) get_post_meta( $post->ID, '_fhb_price_ore', true ) ) {
 			$price = '0';
@@ -169,6 +170,13 @@ final class EventPostType {
 				<td><input type="time" id="fhb-time" name="fhb_time" value="<?php echo esc_attr( $time ); ?>" required></td>
 			</tr>
 			<tr>
+				<th scope="row"><label for="fhb-sales-start"><?php esc_html_e( 'Billetsalg starter', 'forsamlingshus-billetter' ); ?></label></th>
+				<td>
+					<input type="datetime-local" id="fhb-sales-start" name="fhb_sales_start" value="<?php echo esc_attr( $sales_start ); ?>">
+					<p class="description"><?php esc_html_e( 'Tomt felt betyder, at salget er åbent med det samme. Indtil tidspunktet viser købssiden, hvornår salget starter, og en nedtælling. Der kan ikke bestilles før da.', 'forsamlingshus-billetter' ); ?></p>
+				</td>
+			</tr>
+			<tr>
 				<th scope="row"><label for="fhb-price"><?php esc_html_e( 'Pris (DKK)', 'forsamlingshus-billetter' ); ?></label></th>
 				<td>
 					<input type="text" class="regular-text" id="fhb-price" name="fhb_price" value="<?php echo esc_attr( $price ); ?>" inputmode="decimal" placeholder="125,00">
@@ -237,6 +245,7 @@ final class EventPostType {
 		$capacity = isset( $_POST['fhb_capacity'] ) ? absint( $_POST['fhb_capacity'] ) : 0;
 		$date = isset( $_POST['fhb_date'] ) ? sanitize_text_field( wp_unslash( $_POST['fhb_date'] ) ) : '';
 		$time = isset( $_POST['fhb_time'] ) ? sanitize_text_field( wp_unslash( $_POST['fhb_time'] ) ) : '';
+		$sales_raw = isset( $_POST['fhb_sales_start'] ) ? sanitize_text_field( wp_unslash( $_POST['fhb_sales_start'] ) ) : '';
 		$price_raw = isset( $_POST['fhb_price'] ) ? sanitize_text_field( wp_unslash( $_POST['fhb_price'] ) ) : '';
 		$invoice = empty( $_POST['fhb_invoice'] ) ? '0' : '1';
 		$poster_id = isset( $_POST['fhb_poster_id'] ) ? absint( $_POST['fhb_poster_id'] ) : 0;
@@ -258,6 +267,11 @@ final class EventPostType {
 		if ( '' !== $time && 1 !== preg_match( '/^(?:[01]\d|2[0-3]):[0-5]\d$/', $time ) ) {
 			$time = '';
 			Notices::flash( 'error', __( 'Tidspunktet blev ikke gemt.', 'forsamlingshus-billetter' ) );
+		}
+		$sales_start = SalesWindow::normalize( $sales_raw );
+		if ( null === $sales_start ) {
+			$sales_start = (string) get_post_meta( $post_id, '_fhb_sales_start', true );
+			Notices::flash( 'error', __( 'Starttidspunktet for billetsalget blev ikke gemt. Udfyld dato og klokkeslæt, eller lad feltet stå tomt.', 'forsamlingshus-billetter' ) );
 		}
 		if ( '' === $date && 'publish' === get_post_status( $post_id ) ) {
 			Notices::flash( 'error', __( 'Angiv en dato, så den kan vises på salgssiden og billetten.', 'forsamlingshus-billetter' ) );
@@ -283,6 +297,7 @@ final class EventPostType {
 		update_post_meta( $post_id, '_fhb_show_remaining', empty( $_POST['fhb_show_remaining'] ) ? '0' : '1' );
 		update_post_meta( $post_id, '_fhb_date', $date );
 		update_post_meta( $post_id, '_fhb_time', $time );
+		update_post_meta( $post_id, '_fhb_sales_start', $sales_start );
 		update_post_meta( $post_id, '_fhb_price_ore', $price_ore );
 		update_post_meta( $post_id, '_fhb_invoice', $invoice );
 		update_post_meta( $post_id, '_fhb_poster_id', $poster_id );

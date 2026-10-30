@@ -38,6 +38,7 @@ final class Events {
 			'capacity' => (int) get_post_meta( $id, '_fhb_capacity', true ),
 			'date' => (string) get_post_meta( $id, '_fhb_date', true ),
 			'time' => $time,
+			'sales_start' => (string) get_post_meta( $id, '_fhb_sales_start', true ),
 			'price_ore' => (int) get_post_meta( $id, '_fhb_price_ore', true ),
 			'invoice' => '1' === (string) get_post_meta( $id, '_fhb_invoice', true ),
 			'poster_id' => (int) get_post_meta( $id, '_fhb_poster_id', true ),
