@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.7.7
+Stable tag: 1.7.8
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,9 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.7.8 =
+* På salgs- og kvitteringssiden er arrangementets navn væk både som sidetitel over plakaten og som overskrift under plakaten. Dato, tid, pris, «billetter tilbage» og købsformularen bliver. Andre sider beholder deres titel.
 
 = 1.7.7 =
 * Adgangsbillet, dato, tid, køber og pris står tæt under hinanden som én blok ved siden af QR-kortet. Eksemplet og PDF-billetten bruger de samme placeringer.

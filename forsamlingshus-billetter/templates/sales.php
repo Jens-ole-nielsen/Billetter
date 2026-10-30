@@ -55,7 +55,6 @@ $description = wpautop( $description );
 		<?php echo wp_get_attachment_image( (int) $event['poster_id'], 'large', false, array( 'class' => 'fhb-poster', 'alt' => $title ) ); ?>
 	<?php endif; ?>
 
-	<h2 class="fhb-title"><?php echo esc_html( $title ); ?></h2>
 	<ul class="fhb-meta">
 		<?php if ( '' !== $date ) : ?>
 			<li><?php echo esc_html( $date ); ?></li>

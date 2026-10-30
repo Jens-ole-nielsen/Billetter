@@ -32,11 +32,13 @@ final class SalesPage {
 		add_action( 'wp_footer', array( $this, 'print_late_style' ) );
 		add_action( 'template_redirect', array( $this, 'release_cancelled_checkout' ) );
 		add_filter( 'body_class', array( $this, 'body_class' ) );
+		add_filter( 'the_title', array( $this, 'hide_theme_title' ), 10, 2 );
+		add_action( 'wp_head', array( $this, 'print_theme_title_hide' ), 99 );
+		add_action( 'wp_footer', array( $this, 'print_theme_title_hide' ), 99 );
 	}
 
 	/**
-	 * Marks the sales and receipt view so the theme page title can stay hidden.
-	 * The event title is already printed under the poster.
+	 * Marks a page that renders the sales shortcode.
 	 *
 	 * @param list<string> $classes
 	 * @return list<string>
@@ -47,6 +49,36 @@ final class SalesPage {
 		}
 
 		return $classes;
+	}
+
+	/**
+	 * Divi prints the page title in the main loop, above the shortcode.
+	 * Menus and the document title call this outside the loop and stay intact.
+	 */
+	public function hide_theme_title( string $title, int $post_id = 0 ): string {
+		if ( is_admin() || ! in_the_loop() || ! is_main_query() || ! $this->viewing_sales_page() ) {
+			return $title;
+		}
+		if ( (int) get_queried_object_id() !== $post_id ) {
+			return $title;
+		}
+
+		return '';
+	}
+
+	/**
+	 * Hides the theme page title on the sales page even when the theme's own
+	 * CSS loads later. The selectors are page-title widgets, not headings in
+	 * the header. The style is printed only when this request shows the shortcode.
+	 */
+	public function print_theme_title_hide(): void {
+		if ( ! $this->viewing_sales_page() ) {
+			return;
+		}
+		static $copy = 0;
+		++$copy;
+
+		echo '<style id="fhb-hide-page-title-' . (int) $copy . '">h1.entry-title,h1.main_title,.entry-title.main_title,#left-area>article>h1,.wp-block-post-title,.elementor-widget-theme-post-title,.fhb-title{display:none !important}</style>';
 	}
 
 	public function sync( int $event_id ): int {
@@ -119,8 +151,14 @@ final class SalesPage {
 
 	private function viewing_sales_page(): bool {
 		$post = get_queried_object();
+		if ( ! $post instanceof \WP_Post ) {
+			return false;
+		}
+		if ( str_contains( (string) $post->post_content, '[fhb_event' ) ) {
+			return true;
+		}
 
-		return $post instanceof \WP_Post && str_contains( (string) $post->post_content, '[fhb_event' );
+		return (int) get_post_meta( (int) $post->ID, '_fhb_event_id', true ) > 0;
 	}
 
 	private function enqueue_checkout_script(): void {

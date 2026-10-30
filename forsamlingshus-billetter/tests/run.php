@@ -741,9 +741,11 @@ check( 25000 === $rejected['gross_ore'], 'a rejected code does not change the gr
 $front_css = (string) file_get_contents( dirname( __DIR__ ) . '/assets/css/front.css' );
 $sales_page = (string) file_get_contents( dirname( __DIR__ ) . '/includes/SalesPage.php' );
 $sales_template = (string) file_get_contents( dirname( __DIR__ ) . '/templates/sales.php' );
-check( str_contains( $sales_page, "'fhb-sales-page'" ) && str_contains( $sales_page, 'body_class' ), 'the sales page is marked so the theme title can be hidden' );
-check( str_contains( $front_css, 'body.fhb-sales-page h1.entry-title' ) && str_contains( $front_css, 'body.fhb-sales-page h1.main_title' ), 'the theme heading above the poster is hidden' );
-check( str_contains( $sales_template, 'class="fhb-title"' ) && str_contains( $sales_template, 'Tak for din bestilling.' ), 'the title under the poster and the receipt line stay' );
+check( str_contains( $sales_page, "'fhb-sales-page'" ) && str_contains( $sales_page, 'fhb-hide-page-title' ) && str_contains( $sales_page, 'h1.entry-title' ), 'the sales page hides the theme page title' );
+check( str_contains( $sales_page, 'in_the_loop' ) && str_contains( $sales_page, 'is_main_query' ), 'the theme title is cleared only in the sales page loop' );
+check( str_contains( $front_css, 'article:has(.fhb-wrap) > h1.entry-title' ) && str_contains( $front_css, '.fhb-title' ), 'the theme heading is hidden only when the sales form is on the page' );
+check( ! str_contains( $sales_template, 'fhb-title' ) && str_contains( $sales_template, 'class="fhb-meta"' ) && str_contains( $sales_template, 'name="buyer_name"' ), 'the event name under the poster is gone and the form stays' );
+check( str_contains( $sales_template, 'Tak for din bestilling.' ), 'the receipt line stays' );
 check( true === Events::shows_remaining_count( '' ), 'existing events keep the public ticket count' );
 check( true === Events::shows_remaining_count( '1' ), 'an enabled count stays visible' );
 check( false === Events::shows_remaining_count( '0' ), 'the public count can be hidden' );

@@ -3,7 +3,7 @@
  * Plugin Name: Forsamlingshus Billetter
  * Plugin URI: https://github.com/Jens-ole-nielsen/Billetter
  * Description: Sælg billetter til arrangementer i forsamlingshuset. Stripe Checkout og faktura efter aftale. Ingen WooCommerce.
- * Version: 1.7.7
+ * Version: 1.7.8
  * Update URI: https://github.com/Jens-ole-nielsen/Billetter
  * Requires at least: 6.4
  * Requires PHP: 8.1
@@ -20,7 +20,7 @@ declare(strict_types=1);
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'FHB_VERSION', '1.7.7' );
+define( 'FHB_VERSION', '1.7.8' );
 define( 'FHB_DB_VERSION', '1.2.0' );
 define( 'FHB_FILE', __FILE__ );
 define( 'FHB_PATH', plugin_dir_path( __FILE__ ) );

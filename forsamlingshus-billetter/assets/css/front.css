@@ -1,8 +1,15 @@
-/* The theme prints its page title above the poster, often with a badge.
-   The event title already sits under the poster. */
-body.fhb-sales-page h1.entry-title,
-body.fhb-sales-page h1.main_title,
-body.fhb-sales-page .wp-block-post-title {
+/* Divi prints h1.entry-title above the shortcode. Hide it only on a page
+   that actually shows the sales form. Other pages keep their title.
+   .fhb-title is the old heading under the poster; hide a cached copy. */
+article:has(.fhb-wrap) > h1.entry-title,
+article:has(.fhb-wrap) > h1.main_title,
+.entry-content:has(.fhb-wrap) > h1,
+.elementor-widget-theme-post-title:has(~ .fhb-wrap),
+.elementor-widget-theme-post-title:has(~ * .fhb-wrap) {
+	display: none !important;
+}
+
+.fhb-title {
 	display: none !important;
 }
 
