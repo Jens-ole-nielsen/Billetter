@@ -1,0 +1,265 @@
+/* Divi prints h1.entry-title above the shortcode. Hide it only on a page
+   that actually shows the sales form. Other pages keep their title.
+   .fhb-title is the old heading under the poster; hide a cached copy. */
+article:has(.fhb-wrap) > h1.entry-title,
+article:has(.fhb-wrap) > h1.main_title,
+.entry-content:has(.fhb-wrap) > h1,
+.elementor-widget-theme-post-title:has(~ .fhb-wrap),
+.elementor-widget-theme-post-title:has(~ * .fhb-wrap) {
+	display: none !important;
+}
+
+.fhb-title {
+	display: none !important;
+}
+
+/* Divi reserves a right column and draws a line with .container:before.
+   Only the sales page, which carries fhb-sales-page, drops that column. */
+body.fhb-sales-page #sidebar {
+	display: none !important;
+}
+
+body.fhb-sales-page #left-area {
+	float: none !important;
+	width: 100% !important;
+	padding-left: 0 !important;
+	padding-right: 0 !important;
+	margin-left: 0 !important;
+	margin-right: 0 !important;
+}
+
+body.fhb-sales-page #main-content .container:before {
+	display: none !important;
+	content: none !important;
+}
+
+body.fhb-sales-page .fhb-wrap {
+	float: none;
+	width: 100%;
+	max-width: 42rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.fhb-wrap {
+	max-width: 42rem;
+	margin: 1.5rem auto 2.5rem;
+	color: #1c1c1c;
+	line-height: 1.5;
+}
+
+.fhb-poster {
+	width: 100%;
+	height: auto;
+	display: block;
+	border-radius: 12px;
+	margin-bottom: 1rem;
+}
+
+.fhb-title {
+	margin: 0 0 0.4rem;
+	line-height: 1.2;
+}
+
+.fhb-meta {
+	list-style: none;
+	padding: 0;
+	margin: 0 0 0.6rem;
+}
+
+.fhb-meta li {
+	margin: 0.15rem 0;
+}
+
+.fhb-price {
+	font-size: 1.6rem;
+	font-weight: 700;
+	margin: 0.2rem 0 0.6rem;
+}
+
+.fhb-remaining,
+.fhb-soldout {
+	display: inline-block;
+	border-radius: 999px;
+	padding: 0.2rem 0.7rem;
+	font-weight: 600;
+}
+
+.fhb-remaining {
+	background: #eef6f1;
+	color: #1f4b3a;
+}
+
+.fhb-soldout {
+	background: #fdecea;
+	color: #8a1f11;
+}
+
+.fhb-description {
+	margin: 1rem 0;
+}
+
+.fhb-sales-wait {
+	margin-top: 1rem;
+}
+
+.fhb-sales-wait p {
+	margin: 0;
+}
+
+.fhb-countdown {
+	margin-top: 0.45rem;
+	font-size: 1.25rem;
+	font-weight: 700;
+}
+
+.fhb-card {
+	border: 1px solid #e4e0d8;
+	border-radius: 12px;
+	padding: 1.1rem 1.1rem 1.3rem;
+	background: #fff;
+}
+
+.fhb-form label,
+.fhb-form legend {
+	display: block;
+	margin: 0.85rem 0 0.3rem;
+	font-weight: 650;
+}
+
+.fhb-form input[type="text"],
+.fhb-form input[type="email"],
+.fhb-form input[type="tel"],
+.fhb-form input[type="number"],
+.fhb-form textarea {
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+	padding: 0.65rem 0.7rem;
+	border: 1px solid #cfcabc;
+	border-radius: 8px;
+	font: inherit;
+}
+
+.fhb-pay {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 0.85rem 1.4rem;
+	margin-top: 1.15rem;
+}
+
+.fhb-pay-amount {
+	flex: 0 0 auto;
+	margin: 0;
+	line-height: 1.15;
+}
+
+.fhb-pay-amount span {
+	display: block;
+	font-size: 0.95rem;
+	font-weight: 650;
+}
+
+.fhb-pay-amount strong {
+	display: block;
+	font-size: 1.85rem;
+	font-weight: 700;
+}
+
+.fhb-form .fhb-pay button {
+	flex: 0 0 auto;
+	margin-top: 0;
+}
+
+.fhb-form .fhb-pay-note {
+	margin: 1.35rem 0 0;
+	font-size: 0.9rem;
+	line-height: 1.45;
+}
+
+.fhb-form button,
+.fhb-wrap a.fhb-button {
+	margin-top: 1rem;
+	background: #1f4b3a;
+	color: #fff;
+	border: 0;
+	border-radius: 8px;
+	padding: 0.85rem 1.2rem;
+	font-size: 1rem;
+	cursor: pointer;
+}
+
+.fhb-form button:focus,
+.fhb-form input:focus,
+.fhb-form textarea:focus {
+	outline: 2px solid #1f4b3a;
+	outline-offset: 2px;
+}
+
+.fhb-choice {
+	font-weight: 400;
+	margin-top: 0.4rem;
+}
+
+.fhb-error,
+.fhb-success {
+	border-radius: 8px;
+	padding: 0.8rem 1rem;
+	margin: 1rem 0;
+}
+
+.fhb-error {
+	background: #fdecea;
+	border: 1px solid #f5c2c0;
+}
+
+.fhb-success {
+	background: #eef6f1;
+	border: 1px solid #c5e0d2;
+}
+
+.fhb-hp {
+	position: absolute;
+	left: -9999px;
+	height: 0;
+	width: 0;
+	overflow: hidden;
+}
+
+.fhb-dialog {
+	border: 0;
+	border-radius: 16px;
+	padding: 1.4rem 1.4rem 1.2rem;
+	max-width: min(28rem, calc(100vw - 2rem));
+	color: #1c1c1c;
+	box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+}
+
+.fhb-dialog::backdrop {
+	background: rgba(20, 24, 22, 0.55);
+}
+
+.fhb-dialog h2 {
+	margin: 0 0 0.6rem;
+	font-size: 1.35rem;
+}
+
+.fhb-dialog p {
+	margin: 0 0 1rem;
+}
+
+.fhb-dialog button {
+	background: #1f4b3a;
+	color: #fff;
+	border: 0;
+	border-radius: 8px;
+	padding: 0.75rem 1.2rem;
+	font: inherit;
+	cursor: pointer;
+}
+
+.fhb-dialog button:focus {
+	outline: 2px solid #1f4b3a;
+	outline-offset: 2px;
+}
