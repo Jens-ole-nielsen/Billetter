@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.7.9
+Stable tag: 1.7.10
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,9 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.7.10 =
+* Salgssiden med kortkoden [fhb_event] bruger hele indholdsbredden. Divis sidebar og den lodrette streg er væk, og salgsboksen står centreret. Andre sider beholder deres sidebar. Tøm W3 Total Cache, hvis den gamle opdeling stadig vises.
 
 = 1.7.9 =
 * Opdateringer vises under Plugins. Tjekket læser selv den seneste GitHub-udgivelse med filen forsamlingshus-billetter.zip. 1.7.8 blev ikke tilbudt, fordi det gamle tjek kun gentog en tom cache: biblioteket gav GitHub tre sekunder, og når det kald mislykkedes, ledte det efter versionsnummeret i forsamlingshus-billetter.php i arkivets rod. Filen ligger i plugin-mappen, så svaret blev «ingen opdatering».

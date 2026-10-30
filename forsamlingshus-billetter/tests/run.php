@@ -790,6 +790,8 @@ $front_css = (string) file_get_contents( dirname( __DIR__ ) . '/assets/css/front
 $sales_page = (string) file_get_contents( dirname( __DIR__ ) . '/includes/SalesPage.php' );
 $sales_template = (string) file_get_contents( dirname( __DIR__ ) . '/templates/sales.php' );
 check( str_contains( $sales_page, "'fhb-sales-page'" ) && str_contains( $sales_page, 'fhb-hide-page-title' ) && str_contains( $sales_page, 'h1.entry-title' ), 'the sales page hides the theme page title' );
+check( str_contains( $sales_page, 'et_no_sidebar' ) && str_contains( $sales_page, "'et_right_sidebar'" ) && str_contains( $sales_page, 'fhb-sales-full-' ) && str_contains( $sales_page, "'_et_pb_page_layout'" ), 'the sales page drops the Divi sidebar' );
+check( str_contains( $front_css, 'body.fhb-sales-page #left-area' ) && str_contains( $front_css, 'body.fhb-sales-page #main-content .container:before' ) && str_contains( $front_css, 'body.fhb-sales-page #sidebar' ) && str_contains( $front_css, 'body.fhb-sales-page .fhb-wrap' ), 'sales content uses the full column and stays centered' );
 check( str_contains( $sales_page, 'in_the_loop' ) && str_contains( $sales_page, 'is_main_query' ), 'the theme title is cleared only in the sales page loop' );
 check( str_contains( $front_css, 'article:has(.fhb-wrap) > h1.entry-title' ) && str_contains( $front_css, '.fhb-title' ), 'the theme heading is hidden only when the sales form is on the page' );
 check( ! str_contains( $sales_template, 'fhb-title' ) && str_contains( $sales_template, 'class="fhb-meta"' ) && str_contains( $sales_template, 'name="buyer_name"' ), 'the event name under the poster is gone and the form stays' );

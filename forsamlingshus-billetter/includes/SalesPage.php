@@ -31,10 +31,12 @@ final class SalesPage {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'wp_footer', array( $this, 'print_late_style' ) );
 		add_action( 'template_redirect', array( $this, 'release_cancelled_checkout' ) );
-		add_filter( 'body_class', array( $this, 'body_class' ) );
+		add_filter( 'body_class', array( $this, 'body_class' ), 99 );
 		add_filter( 'the_title', array( $this, 'hide_theme_title' ), 10, 2 );
 		add_action( 'wp_head', array( $this, 'print_theme_title_hide' ), 99 );
 		add_action( 'wp_footer', array( $this, 'print_theme_title_hide' ), 99 );
+		add_action( 'wp_head', array( $this, 'print_full_width' ), 99 );
+		add_action( 'wp_footer', array( $this, 'print_full_width' ), 99 );
 	}
 
 	/**
@@ -44,11 +46,14 @@ final class SalesPage {
 	 * @return list<string>
 	 */
 	public function body_class( array $classes ): array {
-		if ( $this->viewing_sales_page() ) {
-			$classes[] = 'fhb-sales-page';
+		if ( ! $this->viewing_sales_page() ) {
+			return $classes;
 		}
+		$classes[] = 'fhb-sales-page';
+		$classes = array_values( array_diff( $classes, array( 'et_right_sidebar', 'et_left_sidebar' ) ) );
+		$classes[] = 'et_no_sidebar';
 
-		return $classes;
+		return array_values( array_unique( $classes ) );
 	}
 
 	/**
@@ -79,6 +84,31 @@ final class SalesPage {
 		++$copy;
 
 		echo '<style id="fhb-hide-page-title-' . (int) $copy . '">h1.entry-title,h1.main_title,.entry-title.main_title,#left-area>article>h1,.wp-block-post-title,.elementor-widget-theme-post-title,.fhb-title{display:none !important}</style>';
+	}
+
+	/**
+	 * Divi keeps a right column and a vertical rule on a normal page. The sales
+	 * page drops that column. Printed in the page itself so a cached stylesheet
+	 * cannot leave the split in place. Other pages are not marked fhb-sales-page.
+	 */
+	public function print_full_width(): void {
+		if ( ! $this->viewing_sales_page() ) {
+			return;
+		}
+		static $copy = 0;
+		++$copy;
+
+		echo '<style id="fhb-sales-full-' . (int) $copy . '">' . self::full_width_css() . '</style>';
+	}
+
+	/**
+	 * Beats Divi's gutter width and the container rule that draws the sidebar line.
+	 */
+	public static function full_width_css(): string {
+		return 'body.fhb-sales-page #sidebar{display:none !important}'
+			. 'body.fhb-sales-page #left-area{float:none !important;width:100% !important;padding-left:0 !important;padding-right:0 !important;margin-left:0 !important;margin-right:0 !important}'
+			. 'body.fhb-sales-page #main-content .container:before{display:none !important;content:none !important}'
+			. 'body.fhb-sales-page .fhb-wrap{float:none;width:100%;max-width:42rem;margin-left:auto;margin-right:auto}';
 	}
 
 	public function sync( int $event_id ): int {
@@ -128,6 +158,7 @@ final class SalesPage {
 
 		update_post_meta( $event_id, '_fhb_sales_page_id', $page_id );
 		update_post_meta( $page_id, '_fhb_event_id', $event_id );
+		update_post_meta( $page_id, '_et_pb_page_layout', 'et_no_sidebar' );
 
 		return $page_id;
 	}
