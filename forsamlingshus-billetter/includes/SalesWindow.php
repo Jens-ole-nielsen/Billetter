@@ -12,9 +12,29 @@ namespace Forsamlingshus\Billetter;
 defined( 'ABSPATH' ) || exit;
 
 /**
- * An empty start means sales are open immediately. A stored start is site-local.
+ * An empty start means sales are open immediately. A stored start is a Danish
+ * wall-clock time. A fixed site offset such as UTC+2 cannot follow winter time,
+ * so those sites use Europe/Copenhagen.
  */
 final class SalesWindow {
+
+	public const DANISH = 'Europe/Copenhagen';
+
+	/**
+	 * Named regions stay as the site saved them. A fixed offset or UTC becomes
+	 * Danish time, so 00:00 in November is CET rather than a leftover summer offset.
+	 */
+	public static function zone( \DateTimeZone $site ): \DateTimeZone {
+		$name = $site->getName();
+		if ( self::DANISH === $name ) {
+			return $site;
+		}
+		if ( 'UTC' === $name || str_starts_with( $name, '+' ) || str_starts_with( $name, '-' ) ) {
+			return new \DateTimeZone( self::DANISH );
+		}
+
+		return $site;
+	}
 
 	/**
 	 * Empty input stays empty. A real date and time becomes Y-m-d H:i. Anything else is rejected.
@@ -57,7 +77,7 @@ final class SalesWindow {
 		if ( null === $normalized || '' === $normalized ) {
 			return null;
 		}
-		$parsed = \DateTimeImmutable::createFromFormat( '!Y-m-d H:i', $normalized, $zone );
+		$parsed = \DateTimeImmutable::createFromFormat( '!Y-m-d H:i', $normalized, self::zone( $zone ) );
 		if ( ! $parsed ) {
 			return null;
 		}

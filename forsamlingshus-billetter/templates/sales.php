@@ -48,8 +48,9 @@ $free = 0 === (int) $event['price_ore'];
 $sales_start = SalesWindow::normalize( (string) ( $event['sales_start'] ?? '' ) );
 $sales_open_at = null === $sales_start ? null : SalesWindow::start_timestamp( $sales_start, wp_timezone() );
 $sales_open = null === $sales_open_at || time() >= $sales_open_at;
-$show_form = $remaining > 0 && $sales_open && ! in_array( $result, array( 'success', 'invoice' ), true );
-$sales_waiting = ! $sales_open && null !== $sales_open_at && ! in_array( $result, array( 'success', 'invoice' ), true );
+$hold_result = in_array( $result, array( 'success', 'invoice' ), true );
+$show_form = $remaining > 0 && ! $hold_result;
+$sales_waiting = ! $sales_open && null !== $sales_open_at && ! $hold_result;
 $description = (string) $event['description'];
 if ( function_exists( 'do_blocks' ) ) {
 	$description = do_blocks( $description );
@@ -174,7 +175,7 @@ $description = wpautop( $description );
 	<?php endif; ?>
 
 	<?php if ( $show_form ) : ?>
-		<form class="fhb-form fhb-card" method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-invoice-confirm="<?php echo esc_attr__( 'Betaling via faktura skal være aftalt med forsamlingshuset på forhånd. Vil du fortsætte med faktura?', 'forsamlingshus-billetter' ); ?>" data-unit="<?php echo esc_attr( (string) (int) $event['price_ore'] ); ?>" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-event="<?php echo esc_attr( (string) (int) $event['id'] ); ?>">
+		<form class="fhb-form fhb-card"<?php echo $sales_waiting ? ' hidden' : ''; ?> method="post" action="<?php echo esc_url( admin_url( 'admin-post.php' ) ); ?>" data-invoice-confirm="<?php echo esc_attr__( 'Betaling via faktura skal være aftalt med forsamlingshuset på forhånd. Vil du fortsætte med faktura?', 'forsamlingshus-billetter' ); ?>" data-unit="<?php echo esc_attr( (string) (int) $event['price_ore'] ); ?>" data-ajax="<?php echo esc_url( admin_url( 'admin-ajax.php' ) ); ?>" data-event="<?php echo esc_attr( (string) (int) $event['id'] ); ?>">
 			<input type="hidden" name="action" value="fhb_checkout">
 			<input type="hidden" name="event_id" value="<?php echo esc_attr( (string) $event['id'] ); ?>">
 			<?php wp_nonce_field( 'fhb_checkout_' . (int) $event['id'], 'fhb_checkout_nonce' ); ?>

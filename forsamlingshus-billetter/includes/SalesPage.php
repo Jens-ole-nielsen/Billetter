@@ -31,6 +31,7 @@ final class SalesPage {
 		add_action( 'wp_enqueue_scripts', array( $this, 'enqueue' ) );
 		add_action( 'wp_footer', array( $this, 'print_late_style' ) );
 		add_action( 'template_redirect', array( $this, 'release_cancelled_checkout' ) );
+		add_action( 'template_redirect', array( $this, 'block_page_cache' ), 0 );
 		add_filter( 'body_class', array( $this, 'body_class' ), 99 );
 		add_filter( 'the_title', array( $this, 'hide_theme_title' ), 10, 2 );
 		add_action( 'wp_head', array( $this, 'print_theme_title_hide' ), 99 );
@@ -190,6 +191,20 @@ final class SalesPage {
 		}
 
 		return (int) get_post_meta( (int) $post->ID, '_fhb_event_id', true ) > 0;
+	}
+
+	/**
+	 * The countdown and the seats left are part of the HTML. A saved copy would
+	 * keep an old sentence and make the browser reload it.
+	 */
+	public function block_page_cache(): void {
+		if ( ! $this->viewing_sales_page() ) {
+			return;
+		}
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true );
+		}
+		nocache_headers();
 	}
 
 	private function enqueue_checkout_script(): void {

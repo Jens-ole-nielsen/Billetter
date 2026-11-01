@@ -145,21 +145,70 @@
 		return "Salget starter om " + line + ".";
 	}
 
+	var openedOnce = false;
+
+	function openSales(node) {
+		var form = document.querySelector("form.fhb-form");
+		var wait = node.closest(".fhb-sales-wait");
+		if (form) {
+			if (wait) {
+				wait.hidden = true;
+			}
+			form.hidden = false;
+			return;
+		}
+		node.textContent = "Billetsalget er åbent.";
+		if (openedOnce) {
+			return;
+		}
+		openedOnce = true;
+		var url = new URL(window.location.href);
+		url.searchParams.set("fhb_live", "1");
+		fetch(url.toString(), {
+			credentials: "same-origin",
+			cache: "no-store"
+		}).then(function (response) {
+			return response.text();
+		}).then(function (html) {
+			var fresh = new DOMParser().parseFromString(html, "text/html").querySelector(".fhb-wrap");
+			var current = document.querySelector(".fhb-wrap");
+			if (!fresh || !current || !fresh.querySelector("form.fhb-form")) {
+				return;
+			}
+			current.replaceWith(fresh);
+			fresh.querySelectorAll("form.fhb-form").forEach(function (next) {
+				bindInvoice(next);
+				bindCoupon(next);
+			});
+		}).catch(function () {
+			return null;
+		});
+	}
+
 	function bindCountdown(node) {
 		var start = parseInt(node.getAttribute("data-fhb-start") || "0", 10);
 		if (!start) {
 			return;
 		}
+		var timer = 0;
+		var done = false;
 		function tick() {
+			if (done) {
+				return;
+			}
 			var left = start - Math.floor(Date.now() / 1000);
 			if (left <= 0) {
-				window.location.reload();
+				done = true;
+				window.clearInterval(timer);
+				openSales(node);
 				return;
 			}
 			node.textContent = countdownText(left);
 		}
 		tick();
-		window.setInterval(tick, 1000);
+		if (!done) {
+			timer = window.setInterval(tick, 1000);
+		}
 	}
 
 	document.querySelectorAll("form.fhb-form").forEach(function (form) {
