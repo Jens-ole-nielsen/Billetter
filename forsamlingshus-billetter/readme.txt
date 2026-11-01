@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.7.13
+Stable tag: 1.7.14
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -59,6 +59,10 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.7.14 =
+* På /salg har kortene med arrangementet og de seneste ordrer samme bredde som rækken Solgt, Ledige og Beløb.
+* Søg efter opdateringer viser den seneste udgivelse uden fejlen «Could not determine if updates are available». Fejlen kom, fordi GitHub svarede 403 på API-kaldene til releases, tags og branchen main. Udgivelsen læses nu fra udgivelsessiden, også uden GitHub-token. Denne version skal installeres manuelt én gang.
 
 = 1.7.13 =
 * På /salg står Solgt, Ledige og Beløb i samme række, både i toppen og på arrangementet.

@@ -11,6 +11,7 @@ namespace Forsamlingshus\Billetter;
 
 use YahnisElsts\PluginUpdateChecker\v5p7\PucFactory;
 use YahnisElsts\PluginUpdateChecker\v5p7\Vcs\Api;
+use YahnisElsts\PluginUpdateChecker\v5p7\Vcs\Reference;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -30,6 +31,11 @@ final class Updates {
 	public const ASSET_NAME = 'forsamlingshus-billetter.zip';
 
 	public const LATEST_RELEASE_URL = 'https://api.github.com/repos/Jens-ole-nielsen/Billetter/releases/latest';
+
+	/**
+	 * The public releases page. Used when api.github.com answers 403.
+	 */
+	public const RELEASE_PAGE_URL = 'https://github.com/Jens-ole-nielsen/Billetter/releases/latest';
 
 	/**
 	 * Last release we are willing to install. Plugin Update Checker's own option
@@ -94,6 +100,7 @@ final class Updates {
 		add_filter( 'site_transient_update_plugins', array( $this, 'note_stored_offer' ), 1 );
 		add_filter( 'site_transient_update_plugins', array( $this, 'keep_offer' ), 100 );
 		add_filter( 'puc_request_info_options-forsamlingshus-billetter', array( self::class, 'request_options' ) );
+		add_filter( 'puc_vcs_update_detection_strategies-forsamlingshus-billetter', array( $this, 'release_strategy' ) );
 
 		$checker = PucFactory::buildUpdateChecker(
 			'https://github.com/Jens-ole-nielsen/Billetter',
@@ -133,6 +140,63 @@ final class Updates {
 	 */
 	public static function token_for_auth( string $token ): string {
 		return trim( $token );
+	}
+
+	/**
+	 * GitHub answers 401 for a rejected token and 403 for a token or a rate limit.
+	 * Either way the public repository can be read again without Authorization.
+	 */
+	public static function should_drop_token( int $code, string $token ): bool {
+		return '' !== $token && ( 401 === $code || 403 === $code );
+	}
+
+	/**
+	 * Plugin Update Checker asks GitHub for /releases/latest, /tags and /branches/main.
+	 * A 403 on those calls is what WordPress shows as “Could not determine if updates
+	 * are available”. One strategy reads the release ourselves and does not make those calls.
+	 *
+	 * @param mixed $strategies
+	 * @return list<callable>
+	 */
+	public function release_strategy( mixed $strategies ): array {
+		unset( $strategies );
+
+		return array( array( $this, 'release_reference' ) );
+	}
+
+	public function release_reference(): ?Reference {
+		$offer = self::fetch_latest_offer( self::token_for_auth( $this->settings->github_token() ) );
+		if ( null === $offer ) {
+			$offer = $this->saved_offer();
+		}
+		if ( null === $offer || ! class_exists( Reference::class ) ) {
+			return null;
+		}
+
+		return new Reference(
+			array(
+				'name' => 'v' . $offer['version'],
+				'version' => $offer['version'],
+				'downloadUrl' => $offer['package'],
+			)
+		);
+	}
+
+	/**
+	 * The tag in a redirect or in the releases page, for example /releases/tag/v1.7.13.
+	 *
+	 * @return array{version:string,package:string}|null
+	 */
+	public static function offer_from_release_page( string $text ): ?array {
+		if ( 1 !== preg_match( '#/releases/tag/v(\d+(?:\.\d+)+)#', $text, $matches ) ) {
+			return null;
+		}
+		$version = $matches[1];
+
+		return array(
+			'version' => $version,
+			'package' => 'https://github.com/Jens-ole-nielsen/Billetter/releases/download/v' . $version . '/' . self::ASSET_NAME,
+		);
 	}
 
 	/**
@@ -260,26 +324,26 @@ final class Updates {
 		if ( ! function_exists( 'wp_remote_get' ) || ! function_exists( 'wp_remote_retrieve_response_code' ) || ! function_exists( 'wp_remote_retrieve_body' ) ) {
 			return null;
 		}
-		$response = self::github_get( $token );
+		$response = self::github_get( self::LATEST_RELEASE_URL, $token );
 		$code = (int) wp_remote_retrieve_response_code( $response );
-		if ( 401 === $code && '' !== $token ) {
-			$response = self::github_get( '' );
+		if ( self::should_drop_token( $code, $token ) ) {
+			$response = self::github_get( self::LATEST_RELEASE_URL, '' );
 			$code = (int) wp_remote_retrieve_response_code( $response );
 		}
-		if ( function_exists( 'is_wp_error' ) && is_wp_error( $response ) ) {
-			return null;
-		}
-		if ( 200 !== $code ) {
-			return null;
+		if ( ! ( function_exists( 'is_wp_error' ) && is_wp_error( $response ) ) && 200 === $code ) {
+			$offer = self::offer_from_release( (string) wp_remote_retrieve_body( $response ) );
+			if ( null !== $offer ) {
+				return $offer;
+			}
 		}
 
-		return self::offer_from_release( (string) wp_remote_retrieve_body( $response ) );
+		return self::offer_from_release_page( self::release_page_text() );
 	}
 
 	/**
 	 * @return mixed
 	 */
-	private static function github_get( string $token ) {
+	private static function github_get( string $url, string $token ) {
 		$headers = array(
 			'Accept' => 'application/vnd.github+json',
 			'User-Agent' => 'forsamlingshus-billetter',
@@ -289,12 +353,35 @@ final class Updates {
 		}
 
 		return wp_remote_get(
-			self::LATEST_RELEASE_URL,
+			$url,
 			array(
 				'timeout' => 15,
 				'headers' => $headers,
 			)
 		);
+	}
+
+	/**
+	 * Location header from /releases/latest, or the page itself if the redirect was followed.
+	 */
+	private static function release_page_text(): string {
+		$response = wp_remote_get(
+			self::RELEASE_PAGE_URL,
+			array(
+				'timeout' => 15,
+				'redirection' => 0,
+				'headers' => array(
+					'User-Agent' => 'forsamlingshus-billetter',
+				),
+			)
+		);
+		if ( function_exists( 'is_wp_error' ) && is_wp_error( $response ) ) {
+			return '';
+		}
+		$location = function_exists( 'wp_remote_retrieve_header' ) ? (string) wp_remote_retrieve_header( $response, 'location' ) : '';
+		$body = function_exists( 'wp_remote_retrieve_body' ) ? (string) wp_remote_retrieve_body( $response ) : '';
+
+		return $location . "\n" . $body;
 	}
 
 	/**

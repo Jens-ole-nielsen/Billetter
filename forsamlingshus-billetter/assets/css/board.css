@@ -92,6 +92,8 @@ body.fhb-board {
 
 .fhb-board-event,
 .fhb-board-orders {
+	width: calc(100% - 1.5rem);
+	max-width: calc(32rem - 1.5rem);
 	margin-top: 0.75rem;
 }
 

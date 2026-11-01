@@ -749,6 +749,13 @@ check( null === Updates::offer_from_release( $preview ), 'a pre-release is not o
 $options = Updates::request_options( array( 'timeout' => 3 ) );
 check( is_array( $options ) && 15 === $options['timeout'], 'GitHub is given fifteen seconds, not three' );
 check( is_array( $options ) && 'forsamlingshus-billetter' === ( $options['headers']['User-Agent'] ?? '' ), 'GitHub requests send a user agent' );
+check( true === Updates::should_drop_token( 403, 'ghp_example' ) && true === Updates::should_drop_token( 401, 'ghp_example' ), 'a rejected token is dropped after 401 and 403' );
+check( false === Updates::should_drop_token( 403, '' ) && false === Updates::should_drop_token( 200, 'ghp_example' ), 'a public 403 is not treated as a token, and 200 keeps the token' );
+$from_page = Updates::offer_from_release_page( "https://github.com/Jens-ole-nielsen/Billetter/releases/tag/v1.7.13\n" );
+check( is_array( $from_page ) && '1.7.13' === $from_page['version'] && str_ends_with( (string) $from_page['package'], '/v1.7.13/forsamlingshus-billetter.zip' ), 'the releases page redirect is the offered zip' );
+check( null === Updates::offer_from_release_page( 'https://github.com/Jens-ole-nielsen/Billetter' ), 'a page without a release tag is not an update' );
+$updates_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Updates.php' );
+check( str_contains( $updates_src, 'puc_vcs_update_detection_strategies-forsamlingshus-billetter' ) && str_contains( $updates_src, 'RELEASE_PAGE_URL' ), 'the update check does not ask GitHub for tags and the main branch' );
 $zone = new DateTimeZone( 'Europe/Copenhagen' );
 check( '' === SalesWindow::normalize( '  ' ), 'an empty sales start stays empty' );
 check( '2026-11-02 19:00' === SalesWindow::normalize( '2026-11-02T19:00' ), 'a sales start keeps the date and time' );
@@ -838,6 +845,7 @@ check( str_contains( $board_rules, 'add_rewrite_rule' ) && str_contains( $board_
 check( ! str_contains( $board_page, 'type="password"' ) && ! str_contains( $board_template, 'type="password"' ), 'the phone page has no separate password' );
 check( str_contains( $board_template, 'Seneste ordrer' ) && str_contains( $board_template, 'Solgt' ) && str_contains( $board_template, 'Ledige' ) && str_contains( $board_template, 'Beløb' ) && ! str_contains( $board_template, '<table' ), 'the phone page lists events and orders without a wide table' );
 check( str_contains( $board_css, 'max-width: 32rem' ) && 2 === substr_count( $board_css, 'repeat(3, minmax(0, 1fr))' ) && ! str_contains( $board_css, 'grid-column: 1 / -1' ), 'sold, seats left and the amount share one row' );
+check( str_contains( $board_css, 'padding: 0.8rem 0.75rem 0' ) && str_contains( $board_css, 'width: calc(100% - 1.5rem)' ) && str_contains( $board_css, 'max-width: calc(32rem - 1.5rem)' ), 'the event and order cards match the width of the three fields' );
 check( str_contains( $orders_page, 'Åbn salget på telefonen' ) && str_contains( $orders_page, 'SalesBoard::PUBLIC_SLUG' ), 'the orders screen links to the short phone address' );
 $paid_mail = AdminNotice::message( 'paid', "Vildt\naften", "Jens\nOlsen", 2, '698,00 kr.', 'FHB-00012' );
 check( 'Ordre betalt: Vildt aften' === $paid_mail['subject'] && ! str_contains( $paid_mail['subject'], "\n" ), 'a paid order tells the administrator which event' );
