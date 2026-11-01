@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.7.12
+Stable tag: 1.7.13
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -38,6 +38,10 @@ Billetterne sendes først, når webhooken har tjekket signaturen og markeret ord
 
 Gå til Billetter → Arrangementer. Udfyld navn, beskrivelse, plakat, antal billetter, dato, tid og pris. Feltet Billetsalg starter kan vente med at åbne salget. Tomt felt åbner det med det samme. Udgiv arrangementet. Salgssiden oprettes automatisk, og linket står i boksen Billetsalg.
 
+= Får vi besked, når nogen betaler? =
+
+Ja. Mailen går til webstedets administrationsmail, den adresse der står under Indstillinger → Generelt. I får besked, når en ordre er betalt, og når en betaling fejler eller udløber. Mailen nævner arrangement, køber, antal og beløb.
+
 = Hvordan følger jeg salget på telefonen? =
 
 Åbn /salg på sitet, for eksempel https://hoerbyforsamlingshus.dk/salg. Det er det samme WordPress-login som wp-admin, og den samme side som før. Kun brugere, der kan se ordrer, har adgang.
@@ -55,6 +59,10 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.7.13 =
+* På /salg står Solgt, Ledige og Beløb i samme række, både i toppen og på arrangementet.
+* Webstedets administrationsmail får besked, når en ordre er betalt, og når en betaling fejler eller udløber. Mailen nævner arrangement, køber, antal og beløb.
 
 = 1.7.12 =
 * Billetsalget på telefonen kan åbnes på /salg. Stien kræver det samme WordPress-login og viser den samme side. Den gamle adresse under wp-admin virker stadig.

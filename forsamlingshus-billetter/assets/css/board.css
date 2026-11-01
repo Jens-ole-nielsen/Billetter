@@ -51,9 +51,9 @@ body.fhb-board {
 
 .fhb-board-totals {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 0.6rem;
-	padding: 0.8rem 1rem 0;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.45rem;
+	padding: 0.8rem 0.75rem 0;
 }
 
 .fhb-board-totals p,
@@ -61,6 +61,11 @@ body.fhb-board {
 .fhb-board-orders {
 	background: #fff;
 	border-radius: 12px;
+	padding: 0.75rem 0.55rem;
+}
+
+.fhb-board-event,
+.fhb-board-orders {
 	padding: 0.85rem 1rem;
 }
 
@@ -79,13 +84,10 @@ body.fhb-board {
 .fhb-board-event dd {
 	display: block;
 	margin: 0;
-	font-size: 1.55rem;
+	font-size: clamp(0.95rem, 4.4vw, 1.35rem);
 	font-weight: 700;
+	line-height: 1.2;
 	overflow-wrap: anywhere;
-}
-
-.fhb-board-amount {
-	grid-column: 1 / -1;
 }
 
 .fhb-board-event,
@@ -102,13 +104,9 @@ body.fhb-board {
 
 .fhb-board-event dl {
 	display: grid;
-	grid-template-columns: 1fr 1fr;
-	gap: 0.55rem 0.8rem;
+	grid-template-columns: repeat(3, minmax(0, 1fr));
+	gap: 0.35rem 0.5rem;
 	margin: 0.8rem 0 0;
-}
-
-.fhb-board-event dl div:last-child {
-	grid-column: 1 / -1;
 }
 
 .fhb-board-hold {

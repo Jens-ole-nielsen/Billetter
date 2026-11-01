@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Forsamlingshus\Billetter;
 
+use Forsamlingshus\Billetter\Mail\AdminNotice;
 use Forsamlingshus\Billetter\Mail\TicketMailer;
 use Forsamlingshus\Billetter\Payments\PaymentMethods;
 use Forsamlingshus\Billetter\Payments\StripeException;
@@ -188,7 +189,7 @@ final class Checkout {
 
 		$gateway = $this->methods->get( 'stripe' );
 		if ( ! $gateway ) {
-			$this->fulfillment->cancel_unpaid( $order_id, false );
+			$this->fulfillment->cancel_unpaid( $order_id, false, AdminNotice::FAILED );
 			$this->fail( $event_id, 'config' );
 		}
 
@@ -207,7 +208,7 @@ final class Checkout {
 			// phpcs:ignore WordPress.PHP.DevelopmentFunctions.error_log_error_log -- Stripe code only, never the secret.
 			error_log( StripeFailure::log_line( $exception->stripe_code, $exception->getCode() ) );
 			$this->orders->set_failure( $order_id, StripeFailure::admin_note( $exception->stripe_code, $exception->getMessage() ) );
-			$this->fulfillment->cancel_unpaid( $order_id, true );
+			$this->fulfillment->cancel_unpaid( $order_id, true, AdminNotice::FAILED );
 			$this->fail( $event_id, StripeFailure::buyer_code( $exception->getMessage(), $exception->stripe_code, $exception->getCode() ) );
 		}
 	}

@@ -9,6 +9,7 @@ declare(strict_types=1);
 
 namespace Forsamlingshus\Billetter;
 
+use Forsamlingshus\Billetter\Mail\AdminNotice;
 use Forsamlingshus\Billetter\Mail\TicketMailer;
 use Forsamlingshus\Billetter\Payments\StripeClient;
 use Forsamlingshus\Billetter\Payments\StripeException;
@@ -53,6 +54,7 @@ final class Fulfillment {
 		);
 		if ( $changed ) {
 			$this->stock->commit_sale( (int) $order->event_id, (int) $order->quantity );
+			AdminNotice::send( $order, AdminNotice::PAID );
 		} elseif ( OrderStatus::PAID !== (string) $order->status ) {
 			return array(
 				'ok' => false,
@@ -90,7 +92,7 @@ final class Fulfillment {
 	 *
 	 * For Stripe, the Checkout session is expired first so a late payment cannot land after the seats are released.
 	 */
-	public function cancel_unpaid( int $order_id, bool $try_stripe ): string {
+	public function cancel_unpaid( int $order_id, bool $try_stripe, string $notice = '' ): string {
 		$order = $this->orders->find( $order_id );
 		if ( ! $order ) {
 			return 'missing';
@@ -117,6 +119,9 @@ final class Fulfillment {
 		);
 		if ( $changed ) {
 			$this->stock->release( (int) $order->event_id, (int) $order->quantity );
+			if ( AdminNotice::FAILED === $notice || AdminNotice::EXPIRED === $notice ) {
+				AdminNotice::send( $order, $notice );
+			}
 			return 'cancelled';
 		}
 
@@ -126,7 +131,7 @@ final class Fulfillment {
 	public function expire_due(): void {
 		$cutoff = wp_date( 'Y-m-d H:i:s', time() - 120 );
 		foreach ( $this->orders->pending_expired( $cutoff, 50 ) as $order ) {
-			$this->cancel_unpaid( (int) $order->id, true );
+			$this->cancel_unpaid( (int) $order->id, true, AdminNotice::EXPIRED );
 		}
 	}
 
@@ -178,10 +183,21 @@ final class Fulfillment {
 		$amount = isset( $session['amount_total'] ) ? (int) $session['amount_total'] : -1;
 		$currency = strtolower( (string) ( $session['currency'] ?? '' ) );
 		if ( $amount !== (int) $order->amount_ore || 'dkk' !== $currency ) {
-			$this->orders->set_failure( (int) $order->id, 'Stripe-beløbet matcher ikke ordren.' );
+			$this->note_failure( $order, 'Stripe-beløbet matcher ikke ordren.' );
 			return false;
 		}
 
 		return true;
+	}
+
+	/**
+	 * A payment that did not match is told to the administrator once.
+	 */
+	public function note_failure( object $order, string $reason ): void {
+		$first = '' === trim( (string) ( $order->failure_reason ?? '' ) );
+		$this->orders->set_failure( (int) $order->id, $reason );
+		if ( $first ) {
+			AdminNotice::send( $order, AdminNotice::FAILED );
+		}
 	}
 }

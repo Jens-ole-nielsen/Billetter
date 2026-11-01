@@ -10,6 +10,7 @@ declare(strict_types=1);
 namespace Forsamlingshus\Billetter\Webhook;
 
 use Forsamlingshus\Billetter\Fulfillment;
+use Forsamlingshus\Billetter\Mail\AdminNotice;
 use Forsamlingshus\Billetter\OrderRepository;
 use Forsamlingshus\Billetter\OrderStatus;
 use Forsamlingshus\Billetter\Settings;
@@ -82,7 +83,7 @@ final class StripeWebhook {
 				$amount = isset( $object['amount_total'] ) ? (int) $object['amount_total'] : -1;
 				$currency = strtolower( (string) ( $object['currency'] ?? '' ) );
 				if ( $amount !== (int) $order->amount_ore || 'dkk' !== $currency ) {
-					$this->orders->set_failure( (int) $order->id, 'Stripe-beløbet matcher ikke ordren.' );
+					$this->fulfillment->note_failure( $order, 'Stripe-beløbet matcher ikke ordren.' );
 					return new WP_REST_Response( array( 'received' => true ), 200 );
 				}
 				$intent = $object['payment_intent'] ?? '';
@@ -93,7 +94,8 @@ final class StripeWebhook {
 
 		if ( 'checkout.session.expired' === $type || 'checkout.session.async_payment_failed' === $type ) {
 			if ( OrderStatus::PENDING === (string) $order->status ) {
-				$this->fulfillment->cancel_unpaid( (int) $order->id, false );
+				$notice = 'checkout.session.async_payment_failed' === $type ? AdminNotice::FAILED : AdminNotice::EXPIRED;
+				$this->fulfillment->cancel_unpaid( (int) $order->id, false, $notice );
 			}
 		}
 

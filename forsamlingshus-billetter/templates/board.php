@@ -26,7 +26,7 @@ defined( 'ABSPATH' ) || exit;
 <section class="fhb-board-totals" aria-label="<?php esc_attr_e( 'Samlet', 'forsamlingshus-billetter' ); ?>">
 	<p><span><?php esc_html_e( 'Solgt', 'forsamlingshus-billetter' ); ?></span><strong><?php echo esc_html( $sold ); ?></strong></p>
 	<p><span><?php esc_html_e( 'Ledige', 'forsamlingshus-billetter' ); ?></span><strong><?php echo esc_html( $remaining ); ?></strong></p>
-	<p class="fhb-board-amount"><span><?php esc_html_e( 'Beløb', 'forsamlingshus-billetter' ); ?></span><strong><?php echo esc_html( $amount ); ?></strong></p>
+	<p><span><?php esc_html_e( 'Beløb', 'forsamlingshus-billetter' ); ?></span><strong><?php echo esc_html( $amount ); ?></strong></p>
 </section>
 
 <?php if ( array() === $events ) : ?>
