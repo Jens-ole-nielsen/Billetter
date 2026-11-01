@@ -254,6 +254,45 @@ final class OrderRepository {
 	}
 
 	/**
+	 * Paid takings for one event, after refunds.
+	 */
+	public function paid_net_ore( int $event_id ): int {
+		global $wpdb;
+
+		$value = $wpdb->get_var(
+			$wpdb->prepare(
+				'SELECT COALESCE(SUM(GREATEST(amount_ore - refunded_ore, 0)), 0) FROM ' . Database::orders_table() . ' WHERE event_id = %d AND status = %s',
+				$event_id,
+				OrderStatus::PAID
+			)
+		);
+
+		return max( 0, (int) $value );
+	}
+
+	/**
+	 * Newest orders that are still a sale: paid, awaiting invoice, or a checkout in progress.
+	 *
+	 * @return list<object>
+	 */
+	public function latest_for_board( int $limit ): array {
+		global $wpdb;
+
+		$limit = max( 1, min( 50, $limit ) );
+		$rows = $wpdb->get_results(
+			$wpdb->prepare(
+				'SELECT * FROM ' . Database::orders_table() . ' WHERE status IN (%s, %s, %s) ORDER BY id DESC LIMIT %d',
+				OrderStatus::PAID,
+				OrderStatus::AWAITING,
+				OrderStatus::PENDING,
+				$limit
+			)
+		);
+
+		return is_array( $rows ) ? $rows : array();
+	}
+
+	/**
 	 * @return list<string>
 	 */
 	public function paid_emails( int $event_id ): array {

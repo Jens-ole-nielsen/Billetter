@@ -4,7 +4,7 @@ Tags: tickets, events, stripe, mobilepay
 Requires at least: 6.4
 Tested up to: 6.4
 Requires PHP: 8.1
-Stable tag: 1.7.10
+Stable tag: 1.7.11
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
@@ -51,6 +51,9 @@ Nej. Deaktivering og almindelig sletning beholder ordrer og billetter. Sæt `def
 Nej. Stripe dækker kort og MobilePay, når det er slået til i Stripe. Faktura efter aftale er den anden mulighed.
 
 == Changelog ==
+
+= 1.7.11 =
+* Salget kan følges på telefonen på wp-admin/admin.php?page=fhb-salg. Siden bruger WordPress-loginnet. Den viser arrangementer, solgte billetter, ledige, beløb og de seneste ordrer. Kun brugere, der kan se ordrer, har adgang.
 
 = 1.7.10 =
 * Salgssiden med kortkoden [fhb_event] bruger hele indholdsbredden. Divis sidebar og den lodrette streg er væk, og salgsboksen står centreret. Andre sider beholder deres sidebar. Tøm W3 Total Cache, hvis den gamle opdeling stadig vises.

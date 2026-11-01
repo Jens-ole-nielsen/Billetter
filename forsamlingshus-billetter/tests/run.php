@@ -21,6 +21,7 @@ require dirname( __DIR__ ) . '/includes/Payments/StripeFailure.php';
 require dirname( __DIR__ ) . '/includes/Payments/StripeGateway.php';
 require dirname( __DIR__ ) . '/includes/Updates.php';
 require dirname( __DIR__ ) . '/includes/SalesWindow.php';
+require dirname( __DIR__ ) . '/includes/SalesBoard.php';
 require dirname( __DIR__ ) . '/includes/Format.php';
 require dirname( __DIR__ ) . '/includes/StripeSignature.php';
 require dirname( __DIR__ ) . '/includes/Color.php';
@@ -46,6 +47,7 @@ use Forsamlingshus\Billetter\Payments\StripeFailure;
 use Forsamlingshus\Billetter\Payments\StripeGateway;
 use Forsamlingshus\Billetter\Updates;
 use Forsamlingshus\Billetter\SalesWindow;
+use Forsamlingshus\Billetter\SalesBoard;
 use Forsamlingshus\Billetter\RefundRules;
 use Forsamlingshus\Billetter\Pdf\Document;
 use Forsamlingshus\Billetter\OrderExport;
@@ -800,6 +802,28 @@ check( str_contains( $sales_template, 'Tak for din bestilling.' ), 'the receipt 
 check( true === Events::shows_remaining_count( '' ), 'existing events keep the public ticket count' );
 check( true === Events::shows_remaining_count( '1' ), 'an enabled count stays visible' );
 check( false === Events::shows_remaining_count( '0' ), 'the public count can be hidden' );
+
+check( 'wp-admin/admin.php?page=fhb-salg' === SalesBoard::url_path(), 'the phone page has a fixed admin address' );
+check( true === SalesBoard::visible( '2026-11-02', '2026-11-01' ), 'tomorrow stays on the phone board' );
+check( true === SalesBoard::visible( '2026-10-31', '2026-11-01' ), 'yesterday stays on the phone board' );
+check( false === SalesBoard::visible( '2026-10-30', '2026-11-01' ), 'an older event leaves the phone board' );
+check( true === SalesBoard::visible( '', '2026-11-01' ), 'an event without a date stays on the phone board' );
+$board_totals = SalesBoard::totals(
+	array(
+		array( 'sold' => 40, 'remaining' => 80, 'amount_ore' => 1396000 ),
+		array( 'sold' => 2, 'remaining' => 0, 'amount_ore' => 69800 ),
+	)
+);
+check( 42 === $board_totals['sold'] && 80 === $board_totals['remaining'] && 1465800 === $board_totals['amount_ore'], 'the phone board adds sold tickets, seats left and takings' );
+$board_page = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Admin/SalesBoardPage.php' );
+$board_template = (string) file_get_contents( dirname( __DIR__ ) . '/templates/board.php' );
+$board_css = (string) file_get_contents( dirname( __DIR__ ) . '/assets/css/board.css' );
+$orders_page = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Admin/OrdersPage.php' );
+check( str_contains( $board_page, 'Capabilities::ORDERS' ) && str_contains( $board_page, 'auth_redirect' ) && str_contains( $board_page, 'name="viewport"' ), 'the phone page uses the WordPress login and the orders capability' );
+check( ! str_contains( $board_page, 'type="password"' ) && ! str_contains( $board_template, 'type="password"' ), 'the phone page has no separate password' );
+check( str_contains( $board_template, 'Seneste ordrer' ) && str_contains( $board_template, 'Solgt' ) && str_contains( $board_template, 'Ledige' ) && str_contains( $board_template, 'Beløb' ) && ! str_contains( $board_template, '<table' ), 'the phone page lists events and orders without a wide table' );
+check( str_contains( $board_css, 'max-width: 32rem' ) && str_contains( $board_css, 'grid-template-columns: 1fr 1fr' ), 'the phone page stacks on a narrow screen' );
+check( str_contains( $orders_page, 'Åbn salget på telefonen' ) && str_contains( $orders_page, 'SalesBoard::PAGE' ), 'the orders screen links to the phone page' );
 
 $saturday = new DateTimeImmutable( '2026-11-14 12:00:00' );
 check( 'lørdag 14. november 2026' === Format::long_date( $saturday ), 'event date is Danish' );

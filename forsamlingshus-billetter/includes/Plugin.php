@@ -16,6 +16,7 @@ use Forsamlingshus\Billetter\Admin\DesignPage;
 use Forsamlingshus\Billetter\Admin\Menu;
 use Forsamlingshus\Billetter\Admin\Notices;
 use Forsamlingshus\Billetter\Admin\OrdersPage;
+use Forsamlingshus\Billetter\Admin\SalesBoardPage;
 use Forsamlingshus\Billetter\Admin\ParticipantsPage;
 use Forsamlingshus\Billetter\Admin\SettingsPage;
 use Forsamlingshus\Billetter\Elementor\Integration;
@@ -66,6 +67,7 @@ final class Plugin {
 		( new Privacy( $orders ) )->hooks();
 		( new Menu() )->hooks();
 		( new OrdersPage( $orders, $fulfillment, $mailer, $tickets, $refunds ) )->hooks();
+		( new SalesBoardPage( $orders, $stock ) )->hooks();
 		( new CouponsPage( $coupons ) )->hooks();
 		( new ParticipantsPage( $tickets ) )->hooks();
 		( new DesignPage( $design ) )->hooks();

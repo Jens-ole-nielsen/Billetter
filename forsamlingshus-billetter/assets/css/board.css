@@ -1,0 +1,141 @@
+body.fhb-board {
+	margin: 0;
+	background: #f4f1ea;
+	color: #1c1c1c;
+	font: 16px/1.4 system-ui, sans-serif;
+}
+
+.fhb-board-top,
+.fhb-board-totals,
+.fhb-board-event,
+.fhb-board-orders {
+	box-sizing: border-box;
+	width: 100%;
+	max-width: 32rem;
+	margin-left: auto;
+	margin-right: auto;
+}
+
+.fhb-board-top {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 1rem;
+	padding: 1rem 1rem 0.4rem;
+}
+
+.fhb-board-kicker {
+	margin: 0;
+	font-size: 1.35rem;
+	font-weight: 700;
+}
+
+.fhb-board-time,
+.fhb-board-when,
+.fhb-board-hold,
+.fhb-board-empty {
+	margin: 0.15rem 0 0;
+	color: #5c564c;
+	font-size: 0.95rem;
+}
+
+.fhb-board-refresh {
+	display: inline-block;
+	background: #1f4b3a;
+	color: #fff;
+	text-decoration: none;
+	border-radius: 999px;
+	padding: 0.7rem 1rem;
+	font-weight: 700;
+}
+
+.fhb-board-totals {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.6rem;
+	padding: 0.8rem 1rem 0;
+}
+
+.fhb-board-totals p,
+.fhb-board-event,
+.fhb-board-orders {
+	background: #fff;
+	border-radius: 12px;
+	padding: 0.85rem 1rem;
+}
+
+.fhb-board-totals p {
+	margin: 0;
+}
+
+.fhb-board-totals span,
+.fhb-board-event dt {
+	display: block;
+	color: #5c564c;
+	font-size: 0.85rem;
+}
+
+.fhb-board-totals strong,
+.fhb-board-event dd {
+	display: block;
+	margin: 0;
+	font-size: 1.55rem;
+	font-weight: 700;
+	overflow-wrap: anywhere;
+}
+
+.fhb-board-amount {
+	grid-column: 1 / -1;
+}
+
+.fhb-board-event,
+.fhb-board-orders {
+	margin-top: 0.75rem;
+}
+
+.fhb-board-event h2,
+.fhb-board-orders > h2 {
+	margin: 0;
+	font-size: 1.15rem;
+	line-height: 1.3;
+}
+
+.fhb-board-event dl {
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 0.55rem 0.8rem;
+	margin: 0.8rem 0 0;
+}
+
+.fhb-board-event dl div:last-child {
+	grid-column: 1 / -1;
+}
+
+.fhb-board-hold {
+	margin-top: 0.7rem;
+}
+
+.fhb-board-orders {
+	margin-bottom: 2rem;
+	padding-bottom: 0.4rem;
+}
+
+.fhb-board-order {
+	padding: 0.85rem 0;
+	border-top: 1px solid #e7e1d6;
+}
+
+.fhb-board-order p {
+	margin: 0.1rem 0;
+	overflow-wrap: anywhere;
+}
+
+.fhb-board-order-line {
+	display: flex;
+	justify-content: space-between;
+	gap: 0.6rem;
+}
+
+.fhb-board-empty {
+	padding: 0.4rem 0 0.8rem;
+}
