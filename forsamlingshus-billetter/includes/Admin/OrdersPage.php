@@ -88,7 +88,7 @@ final class OrdersPage {
 		?>
 		<div class="wrap">
 			<h1><?php esc_html_e( 'Ordrer', 'forsamlingshus-billetter' ); ?></h1>
-			<p><a href="<?php echo esc_url( admin_url( 'admin.php?page=' . SalesBoard::PAGE ) ); ?>"><?php esc_html_e( 'Åbn salget på telefonen', 'forsamlingshus-billetter' ); ?></a></p>
+			<p><a href="<?php echo esc_url( home_url( '/' . SalesBoard::PUBLIC_SLUG . '/' ) ); ?>"><?php esc_html_e( 'Åbn salget på telefonen', 'forsamlingshus-billetter' ); ?></a></p>
 			<form method="get">
 				<input type="hidden" name="page" value="fhb-orders">
 				<?php $this->event_select( $event_id ); ?>

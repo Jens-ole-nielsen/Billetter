@@ -34,8 +34,39 @@ final class SalesBoardPage {
 	}
 
 	public function hooks(): void {
+		if ( $this->path_is_public() ) {
+			$this->block_cache();
+		}
+		add_action( 'init', array( $this, 'register_route' ), 0 );
+		add_action( 'init', array( $this, 'flush_route_once' ), 999 );
+		add_filter( 'query_vars', array( $this, 'query_vars' ) );
+		add_action( 'template_redirect', array( $this, 'maybe_render_public' ), 0 );
 		add_action( 'admin_menu', array( $this, 'menu' ) );
 		add_action( 'admin_init', array( $this, 'maybe_render' ) );
+	}
+
+	public function register_route(): void {
+		SalesBoard::register_rewrite();
+	}
+
+	/**
+	 * Plugin updates do not run the activation hook, so the /salg rule is stored once.
+	 */
+	public function flush_route_once(): void {
+		if ( get_option( SalesBoard::ROUTE_OPTION ) === SalesBoard::PUBLIC_SLUG ) {
+			return;
+		}
+		flush_rewrite_rules( false );
+		update_option( SalesBoard::ROUTE_OPTION, SalesBoard::PUBLIC_SLUG, false );
+	}
+
+	/**
+	 * @param list<string> $vars
+	 * @return list<string>
+	 */
+	public function query_vars( array $vars ): array {
+		$vars[] = SalesBoard::QUERY_VAR;
+		return $vars;
 	}
 
 	public function menu(): void {
@@ -58,19 +89,56 @@ final class SalesBoardPage {
 		if ( SalesBoard::PAGE !== $page ) {
 			return;
 		}
+		$this->authorize();
+		nocache_headers();
+		$this->send( admin_url( 'admin.php?page=' . SalesBoard::PAGE ) );
+		exit;
+	}
+
+	/**
+	 * /salg uses the same login and the same board as the wp-admin address.
+	 */
+	public function maybe_render_public(): void {
+		if ( ! $this->path_is_public() ) {
+			return;
+		}
+		$this->block_cache();
+		$this->authorize();
+		status_header( 200 );
+		$this->send( home_url( '/' . SalesBoard::PUBLIC_SLUG . '/' ) );
+		exit;
+	}
+
+	private function authorize(): void {
 		if ( ! is_user_logged_in() ) {
 			auth_redirect();
 		}
 		if ( ! Capabilities::can( Capabilities::ORDERS ) ) {
 			wp_die( esc_html__( 'Du har ikke adgang til billetsalget.', 'forsamlingshus-billetter' ), '', array( 'response' => 403 ) );
 		}
-
-		nocache_headers();
-		$this->send();
-		exit;
 	}
 
-	private function send(): void {
+	private function block_cache(): void {
+		if ( ! defined( 'DONOTCACHEPAGE' ) ) {
+			define( 'DONOTCACHEPAGE', true );
+		}
+		nocache_headers();
+	}
+
+	private function path_is_public(): bool {
+		$uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) wp_unslash( $_SERVER['REQUEST_URI'] ) : '';
+		$home = '/';
+		if ( function_exists( 'home_url' ) ) {
+			$parsed = wp_parse_url( home_url( '/' ), PHP_URL_PATH );
+			if ( is_string( $parsed ) && '' !== $parsed ) {
+				$home = $parsed;
+			}
+		}
+
+		return SalesBoard::is_public_path( $uri, $home );
+	}
+
+	private function send( string $refresh ): void {
 		$today = wp_date( 'Y-m-d' );
 		$events = $this->events( $today );
 		$totals = SalesBoard::totals( $events );
@@ -79,8 +147,6 @@ final class SalesBoardPage {
 		if ( is_file( $css_file ) ) {
 			$css = str_replace( '</', '<\/', (string) file_get_contents( $css_file ) );
 		}
-		$refresh = admin_url( 'admin.php?page=' . SalesBoard::PAGE );
-
 		echo '<!DOCTYPE html><html lang="da"><head><meta charset="utf-8">';
 		echo '<meta name="viewport" content="width=device-width, initial-scale=1">';
 		echo '<meta name="robots" content="noindex, nofollow">';

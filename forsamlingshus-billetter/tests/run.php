@@ -804,6 +804,16 @@ check( true === Events::shows_remaining_count( '1' ), 'an enabled count stays vi
 check( false === Events::shows_remaining_count( '0' ), 'the public count can be hidden' );
 
 check( 'wp-admin/admin.php?page=fhb-salg' === SalesBoard::url_path(), 'the phone page has a fixed admin address' );
+check( 'salg' === SalesBoard::PUBLIC_SLUG, 'the short public path is /salg' );
+check( true === SalesBoard::is_public_path( '/salg', '/' ), '/salg opens the phone page' );
+check( true === SalesBoard::is_public_path( '/salg/', '/' ), '/salg/ opens the phone page' );
+check( true === SalesBoard::is_public_path( '/Salg/?fra=telefon', '/' ), 'the short path ignores case and a query string' );
+check( false === SalesBoard::is_public_path( '/salg/mere', '/' ), 'a longer path is not the phone page' );
+check( false === SalesBoard::is_public_path( '/undersalg', '/' ), 'a similar slug is not the phone page' );
+check( false === SalesBoard::is_public_path( '/vildtaften-2027/', '/' ), 'an event page is not the phone page' );
+check( false === SalesBoard::is_public_path( '/wp-admin/admin.php?page=fhb-salg', '/' ), 'the admin address is not the public path' );
+check( true === SalesBoard::is_public_path( '/under/salg/', '/under' ), 'a site in a subdirectory still matches /salg' );
+check( false === SalesBoard::is_public_path( '/under/salg/', '/' ), 'a nested path is not /salg on a root site' );
 check( true === SalesBoard::visible( '2026-11-02', '2026-11-01' ), 'tomorrow stays on the phone board' );
 check( true === SalesBoard::visible( '2026-10-31', '2026-11-01' ), 'yesterday stays on the phone board' );
 check( false === SalesBoard::visible( '2026-10-30', '2026-11-01' ), 'an older event leaves the phone board' );
@@ -820,10 +830,13 @@ $board_template = (string) file_get_contents( dirname( __DIR__ ) . '/templates/b
 $board_css = (string) file_get_contents( dirname( __DIR__ ) . '/assets/css/board.css' );
 $orders_page = (string) file_get_contents( dirname( __DIR__ ) . '/includes/Admin/OrdersPage.php' );
 check( str_contains( $board_page, 'Capabilities::ORDERS' ) && str_contains( $board_page, 'auth_redirect' ) && str_contains( $board_page, 'name="viewport"' ), 'the phone page uses the WordPress login and the orders capability' );
+check( str_contains( $board_page, 'template_redirect' ) && str_contains( $board_page, 'maybe_render_public' ) && str_contains( $board_page, 'DONOTCACHEPAGE' ) && str_contains( $board_page, 'PUBLIC_SLUG' ), 'the short path renders the same board and skips the page cache' );
+$board_rules = (string) file_get_contents( dirname( __DIR__ ) . '/includes/SalesBoard.php' );
+check( str_contains( $board_rules, 'add_rewrite_rule' ) && str_contains( $board_rules, 'PUBLIC_SLUG' ), 'the short path is a rewrite rule' );
 check( ! str_contains( $board_page, 'type="password"' ) && ! str_contains( $board_template, 'type="password"' ), 'the phone page has no separate password' );
 check( str_contains( $board_template, 'Seneste ordrer' ) && str_contains( $board_template, 'Solgt' ) && str_contains( $board_template, 'Ledige' ) && str_contains( $board_template, 'Beløb' ) && ! str_contains( $board_template, '<table' ), 'the phone page lists events and orders without a wide table' );
 check( str_contains( $board_css, 'max-width: 32rem' ) && str_contains( $board_css, 'grid-template-columns: 1fr 1fr' ), 'the phone page stacks on a narrow screen' );
-check( str_contains( $orders_page, 'Åbn salget på telefonen' ) && str_contains( $orders_page, 'SalesBoard::PAGE' ), 'the orders screen links to the phone page' );
+check( str_contains( $orders_page, 'Åbn salget på telefonen' ) && str_contains( $orders_page, 'SalesBoard::PUBLIC_SLUG' ), 'the orders screen links to the short phone address' );
 
 $saturday = new DateTimeImmutable( '2026-11-14 12:00:00' );
 check( 'lørdag 14. november 2026' === Format::long_date( $saturday ), 'event date is Danish' );

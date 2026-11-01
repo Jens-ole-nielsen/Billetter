@@ -22,7 +22,9 @@ final class Activator {
 		if ( ! wp_next_scheduled( 'fhb_expire_pending' ) ) {
 			wp_schedule_event( time() + MINUTE_IN_SECONDS, 'hourly', 'fhb_expire_pending' );
 		}
+		SalesBoard::register_rewrite();
 		flush_rewrite_rules();
+		update_option( SalesBoard::ROUTE_OPTION, SalesBoard::PUBLIC_SLUG, false );
 	}
 
 	public static function deactivate(): void {
@@ -30,6 +32,7 @@ final class Activator {
 		if ( $timestamp ) {
 			wp_unschedule_event( $timestamp, 'fhb_expire_pending' );
 		}
+		delete_option( SalesBoard::ROUTE_OPTION );
 		flush_rewrite_rules();
 	}
 }
